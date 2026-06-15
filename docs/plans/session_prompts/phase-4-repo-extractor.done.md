@@ -3,10 +3,11 @@ name: phase-4-repo-extractor-prompt
 title: "Session prompt — Phase 4 (repo extractor + container sandbox)"
 kind: session-prompt
 phase: 4
-status: active
+status: done
 related: [phase-4-repo-extractor]
 created_at: 2026-06-15
 updated_at: 2026-06-15
+completed_at: 2026-06-15
 ---
 
 # Session prompt — Phase 4 (repo extractor + per-clone container sandbox)

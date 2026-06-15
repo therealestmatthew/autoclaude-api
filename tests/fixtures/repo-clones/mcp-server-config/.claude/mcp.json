@@ -1,0 +1,6 @@
+{
+  "mcpServers": {
+    "supabase": {"command": "supabase-mcp"},
+    "github": {"command": "gh-mcp"}
+  }
+}

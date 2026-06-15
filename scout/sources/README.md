@@ -20,6 +20,24 @@ notes: "Optional human notes about what we watch this source for."
 
 The `type` field maps to a parser in `/scout/extractors/`. Adding a new source *kind* means writing both a config here and an extractor.
 
+## Repos are an *extraction target*, not a source
+
+There is no `repos.yaml` here, and `kind: repo` is never a source `type:`.
+Repos enter the catalog one of two ways:
+
+1. A discovery source (HN, Lobsters, Reddit, an awesome-list) surfaces a
+   GitHub URL → the runner queues a `kind: repo` candidate.
+2. An operator calls `uv run scout extract-repo <url-or-org/repo>` for an
+   ad-hoc target.
+
+In both cases, the repo extractor (`scout/extractors/repo.py`) clones the
+repo inside a per-clone container (see `conventions/security.md`), parses
+the allowlisted files (`.claude/`, `agents/`, `skills/`, `prompts/`,
+`mcp.json`, `README*`, `LICENSE*`, top-level `*.md`), and emits **child
+candidates** with `relations.parent: <repo-slug>`. Children land back in
+`/scout/queue/` and go through the same human review gate as every other
+candidate.
+
 ## Current sources
 
 - [hackernews.yaml](hackernews.yaml) — HN search + Algolia API.

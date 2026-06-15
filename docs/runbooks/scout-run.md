@@ -1,7 +1,7 @@
 ---
 name: scout-run
 title: "Run the scout and review the queue"
-when_to_run: "Whenever you want fresh discovery candidates from HN, Lobsters, Reddit, or curated awesome-lists — typically daily, but the cursors keep state so a missed day just means a bigger next batch."
+when_to_run: "Whenever you want fresh discovery candidates from HN, Lobsters, Reddit, or curated awesome-lists — typically daily, but the cursors keep state so a missed day just means a bigger next batch. Also covers `scout extract-repo` for ad-hoc child-asset extraction from one GitHub repo."
 last_used:
 last_verified: 2026-06-15
 ---
@@ -68,6 +68,46 @@ uv run scout run -s awesome-lists -v
 ```
 
 The slug matches the YAML filename stem in `/scout/sources/<slug>.yaml`.
+
+### 1b'. Extract one GitHub repo by hand
+
+`scout extract-repo` clones a single GitHub repo inside a per-clone Docker
+container, walks the allowlisted paths (see `conventions/security.md`),
+and writes one queue file per child asset (agent, skill, plugin, mcp,
+prompt) it finds. The container has network for the `git clone` step only;
+nothing from the repo is ever executed.
+
+```sh
+# Pass either a full URL or org/repo shorthand:
+uv run scout extract-repo anthropics/claude-cookbooks
+uv run scout extract-repo https://github.com/anthropics/claude-cookbooks -v
+```
+
+**Expected output (shape):**
+
+```
+scout-extract-<YYYY-MM-DD>-<HHMMSS>: children_queued=<N> warnings=<W>
+```
+
+Each child queue file has `relations.parent: <repo-slug>`, a
+`fingerprint: sha256:<hex>` over the upstream file bytes, and a
+`source.url` pointing at `https://github.com/<org>/<repo>/blob/<commit-sha>/<relpath>`.
+
+**Prerequisites.**
+
+- Docker daemon running and accessible to your user (`docker info` works).
+  Podman is not yet supported (`--runtime podman` raises NotImplementedError).
+- The `scout-clone-runner` image. If it isn't present, you'll see a
+  `ContainerError` — build it once with:
+  ```sh
+  docker build -t scout-clone-runner scout/clone_runner/
+  ```
+
+**The queue-driven path runs automatically.** When `scout run` surfaces a
+new `kind: repo` candidate (e.g. from awesome-lists), the same tick walks
+the queue for unreviewed github-typed repo entries and runs the extractor
+on each. To skip a repo permanently, delete the parent queue file before
+the next run.
 
 ### 1c. Force a "from-scratch" run
 
@@ -224,6 +264,25 @@ Check that the YAML's `type:` matches a key in `EXTRACTOR_REGISTRY` in
 `scout/agent/runner.py`.
 
 ---
+
+### `ContainerError: docker not on PATH` from `extract-repo`
+
+`scout/_container.py` checked `shutil.which("docker")` and the binary was
+absent. Install Docker (or invoke an extractor that doesn't need it). The
+podman runtime is reserved (`--runtime podman` raises
+`NotImplementedError`) until Phase 6 revisits the rootless story.
+
+### `ContainerError: clone-runner exited <n>` from `extract-repo`
+
+The clone-runner container exited nonzero. The first ~500 chars of stderr
+are included in the error string; common causes:
+
+- The image isn't built locally. Run
+  `docker build -t scout-clone-runner scout/clone_runner/`.
+- `git clone` failed (404, auth-required, or network). The repo URL is
+  reported in the error; check it.
+- A symlink was found inside the allowlisted dirs. The clone-runner aborts
+  with exit 2 in that case — treat the repo as hostile.
 
 ## What this runbook does NOT cover
 

@@ -22,10 +22,10 @@ class Extractor(Protocol):
 | `hackernews`   | Algolia search API                      | **Phase 3 — `hackernews.py`**     |
 | `lobsters`     | Per-tag RSS                             | **Phase 3 — `lobsters.py`**       |
 | `reddit`       | `/r/<sub>/new.json`                     | **Phase 3 — `reddit.py`**         |
-| `github-repo`  | `git clone <url>` + tree walk           | Phase 4 (per-clone container)     |
+| `repo`         | `git clone <url>` + tree walk           | **Phase 4 — `repo.py`**           |
 | `x`            | Twitter/X API (decision pending)        | Phase 5                           |
 
-`github-repo` is special — it's not a *discovery* extractor; it's invoked when any other extractor surfaces a `github.com/*` URL. It clones the repo and proposes child assets (agents, skills, plugins, MCPs, prompts) from the tree.
+`repo` is special — it's not a *discovery* extractor; it's invoked when any other extractor surfaces a `kind: repo`, `source.type: github` queue entry (or manually via `scout extract-repo`). It clones the repo in a per-clone container (see `conventions/security.md`) and proposes child assets (agents, skills, plugins, MCPs, prompts) with `relations.parent: <repo-slug>`.
 
 ## Security baseline (Phase 3.0)
 

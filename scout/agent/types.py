@@ -45,6 +45,27 @@ class Candidate(BaseModel):
     raw_url: str | None = None
     score: int | None = None
     excerpt: str | None = None
+    # Child-of-a-repo fields (Phase 4). `parent` is the parent asset's slug;
+    # `fingerprint` is `sha256:<hex>` over the source file bytes. Both stay
+    # `None` for top-level discovery candidates.
+    parent: str | None = None
+    fingerprint: str | None = None
+
+
+class RepoExtractRequest(BaseModel):
+    """Input to the repo extractor.
+
+    Either constructed from a queue file (via the runner) or from the
+    `extract-repo` CLI. The fields here are what the extractor *needs* — the
+    full Candidate of the parent repo is loaded by the runner separately.
+    """
+
+    repo_slug: str
+    repo_url: str
+    discovered_via: str = "manual"
+    run_id: str
+    source_authors: list[str] = Field(default_factory=list)
+    source_license: str = ""
 
 
 class SourceState(BaseModel):

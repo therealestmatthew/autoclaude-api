@@ -19,6 +19,21 @@ A slug is an asset's permanent identity. Treat it like a primary key.
 3. Kebab-case it.
 4. Check `/catalog/` for collisions; if one exists, disambiguate with the author/org (`code-review-anthropic` vs `code-review-cursor`), not a number suffix.
 
+### Child slugs (extracted from a parent)
+
+When an extractor surfaces a child asset out of a parent (e.g. an `agent` file inside a scouted GitHub `repo`), the child's slug is **scoped under the parent**:
+
+```
+<parent-slug>--<child-name>
+```
+
+- Double-dash (`--`) is the scope separator. It is the only place `--` appears in a well-formed slug, so it is visually unambiguous against the kebab-case dashes inside each segment.
+- `<child-name>` is the kebab-cased file or directory name that uniquely identifies the child within its parent (filename without `.md` for agents/prompts; directory name for skills/plugins; `mcp-<server-name>` for MCP server entries).
+- Like every other slug, the result is globally unique across `/catalog/`. If a parent legitimately contains two children that would collide (e.g. `agents/foo.md` and `.claude/agents/foo.md`), the extractor emits the first and logs a warning; we do not auto-disambiguate.
+- The scoping is a property of the *slug*, not of the on-disk path: child files still live flat in `/catalog/<slug>.md`. The graph link back to the parent lives in `relations.parent`.
+
+**Example.** A repo scouted as `anthropic-claude-cookbooks` containing `.claude/agents/code-reviewer.md` and `skills/test-runner/SKILL.md` yields children `anthropic-claude-cookbooks--code-reviewer` and `anthropic-claude-cookbooks--test-runner`.
+
 ## File names
 
 - **Catalog assets:** `<slug>.md`. No kind prefix, no subfolders by kind.

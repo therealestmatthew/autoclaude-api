@@ -19,17 +19,19 @@ from pathlib import Path
 
 import yaml
 
-from .._util import canonical_github_url, parse_frontmatter
+from .._util import canonical_github_url, parse_frontmatter, slugify
 from ..extractors.awesome_list import AwesomeListExtractor
 from ..extractors.hackernews import HackerNewsExtractor
 from ..extractors.lobsters import LobstersExtractor
 from ..extractors.reddit import RedditExtractor
+from ..extractors.repo import RepoExtractor
 from .types import (
     AwesomeListSource,
     Candidate,
     HackerNewsSource,
     LobstersSource,
     RedditSource,
+    RepoExtractRequest,
     SourceState,
 )
 
@@ -137,9 +139,71 @@ def run_once(source_name: str | None = None, verbose: bool = False) -> dict:
                 f"skipped_catalog={per_source['skipped_catalog_dedup']}"
             )
 
+    # After primary extractors, walk the queue for github-typed `repo` entries
+    # and run the repo extractor over them. Children land back in /scout/queue/.
+    repo_stats = _process_repo_queue(run_id=run_id, verbose=verbose)
+    stats["repo_extraction"] = repo_stats
+    stats["candidates_queued"] += repo_stats["children_queued"]
+
     stats["ended_at"] = datetime.now(UTC).isoformat()
     _write_thread_log(stats)
     return stats
+
+
+def extract_repo_once(
+    repo_url: str,
+    *,
+    runtime: str = "docker",
+    verbose: bool = False,
+    extractor: RepoExtractor | None = None,
+) -> dict:
+    """One-shot manual extraction. Mirrors the surface of `run_once` so the
+    CLI can hand-off cleanly."""
+    started_at = datetime.now(UTC).isoformat()
+    run_id = (
+        "scout-extract-"
+        + date.today().isoformat()
+        + "-"
+        + datetime.now(UTC).strftime("%H%M%S")
+    )
+
+    repo_slug = slugify(canonical_github_url(repo_url).removeprefix("https://github.com/"))
+    req = RepoExtractRequest(
+        repo_slug=repo_slug,
+        repo_url=repo_url,
+        discovered_via="manual",
+        run_id=run_id,
+    )
+
+    ext = extractor or RepoExtractor(runtime=runtime)
+    report = ext.extract(req)
+
+    written = 0
+    for cand in report.candidates:
+        QUEUE_DIR.mkdir(parents=True, exist_ok=True)
+        (QUEUE_DIR / _queue_filename(cand)).write_text(_candidate_to_markdown(cand))
+        written += 1
+
+    if verbose:
+        print(
+            f"[scout] extract-repo {repo_slug}: "
+            f"children_queued={written} warnings={len(report.warnings)} "
+            f"extracted_files={report.extracted_files}"
+        )
+
+    record = {
+        "run_id": run_id,
+        "started_at": started_at,
+        "ended_at": datetime.now(UTC).isoformat(),
+        "repo_slug": repo_slug,
+        "repo_url": repo_url,
+        "children_queued": written,
+        "warnings": report.warnings,
+        "commit_sha": report.commit_sha,
+        "fatal": bool(report.warnings) and written == 0,
+    }
+    _write_extract_thread_log(record)
+    return record
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +255,7 @@ def _queue_filename(c: Candidate) -> str:
 
 
 def _candidate_to_markdown(c: Candidate) -> str:
-    fm = {
+    fm: dict = {
         "name": c.name,
         "kind": c.kind,
         "title": c.title,
@@ -219,12 +283,109 @@ def _candidate_to_markdown(c: Candidate) -> str:
         "created_at": c.discovered_on,
         "updated_at": c.discovered_on,
     }
+    if c.parent:
+        fm["relations"] = {"parent": c.parent}
+    if c.fingerprint:
+        fm["fingerprint"] = c.fingerprint
     body = (
         "# Reviewer notes\n\n"
         "_Empty. Reviewer fills this in when deciding what to do with the candidate "
         "(see /conventions/merge-rules.md)._\n"
     )
     return f"---\n{yaml.safe_dump(fm, sort_keys=False, default_flow_style=False)}---\n\n{body}"
+
+
+def _process_repo_queue(*, run_id: str, verbose: bool) -> dict:
+    """Walk /scout/queue/ for unreviewed github-typed `kind: repo` entries and
+    invoke the repo extractor on each. Children land back in the queue. The
+    parent queue file is *not* removed — human review still decides whether
+    the parent itself stays.
+
+    To avoid re-extracting the same repo on every run, we skip any parent that
+    already has at least one queue file with `relations.parent: <parent-slug>`.
+    """
+    if not QUEUE_DIR.exists():
+        return {"repos_extracted": 0, "children_queued": 0, "warnings": []}
+
+    parents_with_children: set[str] = set()
+    repo_queue_paths: list[Path] = []
+    for p in sorted(QUEUE_DIR.glob("*.md")):
+        if p.name.startswith("_"):
+            continue
+        fm = parse_frontmatter(p.read_text())
+        relations = fm.get("relations") if isinstance(fm, dict) else None
+        if isinstance(relations, dict) and relations.get("parent"):
+            parents_with_children.add(str(relations["parent"]))
+            continue
+        if fm.get("kind") != "repo":
+            continue
+        src = fm.get("source")
+        if not isinstance(src, dict) or src.get("type") != "github":
+            continue
+        repo_queue_paths.append(p)
+
+    extractor = RepoExtractor()
+    repos_extracted = 0
+    children_queued = 0
+    warnings: list[str] = []
+
+    for p in repo_queue_paths:
+        fm = parse_frontmatter(p.read_text())
+        repo_slug = fm.get("name")
+        src = fm.get("source") or {}
+        repo_url = src.get("url")
+        if not (isinstance(repo_slug, str) and isinstance(repo_url, str)):
+            continue
+        if repo_slug in parents_with_children:
+            continue
+
+        discovered = fm.get("discovered") or {}
+        req = RepoExtractRequest(
+            repo_slug=repo_slug,
+            repo_url=repo_url,
+            discovered_via=str(discovered.get("via") or "manual"),
+            run_id=run_id,
+            source_authors=list(src.get("authors") or []),
+            source_license=str(src.get("license") or ""),
+        )
+        report = extractor.extract(req)
+        repos_extracted += 1
+
+        for cand in report.candidates:
+            (QUEUE_DIR / _queue_filename(cand)).write_text(_candidate_to_markdown(cand))
+            children_queued += 1
+        warnings.extend(report.warnings)
+        if verbose:
+            print(
+                f"[scout] repo {repo_slug}: children_queued={len(report.candidates)} "
+                f"warnings={len(report.warnings)}"
+            )
+
+    return {
+        "repos_extracted": repos_extracted,
+        "children_queued": children_queued,
+        "warnings": warnings,
+    }
+
+
+def _write_extract_thread_log(record: dict) -> None:
+    THREADS_DIR.mkdir(parents=True, exist_ok=True)
+    today = date.today().isoformat()
+    path = THREADS_DIR / f"{today}.jsonl"
+    line = {
+        "thread_id": record["run_id"],
+        "agent": "scout-extract-repo",
+        "started_at": record["started_at"],
+        "ended_at": record["ended_at"],
+        "outcome": "ok" if record["children_queued"] > 0 else "partial",
+        "summary": (
+            f"repo={record['repo_slug']} children={record['children_queued']} "
+            f"warnings={len(record['warnings'])}"
+        ),
+        "stats": record,
+    }
+    with path.open("a") as f:
+        f.write(json.dumps(line) + "\n")
 
 
 def _write_thread_log(stats: dict) -> None:

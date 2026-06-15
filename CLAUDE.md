@@ -131,9 +131,13 @@ scout/                    Python package
     types.py              Candidate, SourceState, per-source config models
     runner.py             run_once orchestrator
     cli.py                argparse entry point (exposes `scout` script)
+  _container.py           Phase 4 — locked-flag docker/podman wrapper
+  clone_runner/           Phase 4 — Dockerfile + entrypoint.sh for the
+                          per-clone sandbox image (scout-clone-runner)
   extractors/
     base.py               Extractor Protocol
     awesome_list.py       Phase 2 extractor
+    repo.py               Phase 4 extractor
   sources/                YAML configs (data, not Python)
   state/                  per-source persisted state (gitignored at runtime)
   queue/                  candidate markdown files (gitignored at runtime)
@@ -155,7 +159,7 @@ When adding a new test, follow `/conventions/testing.md` for which directory it 
 - **Phase 1 (done):** hand-curate the catalog with assets we already use.
 - **Phase 2 (done):** scout v1 — awesome-list extractor + runner + queue + thread log.
 - **Phase 3 (done):** scout v2 — HN / Reddit / Lobsters extractors on the Phase 3.0 security baseline (`scout/_security.py`, `conventions/security.md`).
-- **Phase 4:** repo extractor (GitHub URL → child assets), running each clone in a per-clone Docker / podman container per `/conventions/security.md`.
+- **Phase 4 (done):** repo extractor (GitHub URL → child assets), running each clone in a per-clone Docker container per `/conventions/security.md`. Podman runtime is reserved (stub raises `NotImplementedError`).
 - **Phase 5:** X / Twitter ingestion.
 - **Phase 6:** automated merge/dedup decisioning.
 - **Phase 7:** command-center observability (token burn, threads).

@@ -34,19 +34,48 @@ and a no-tools sandbox for that agent.
 Default assumption: every repo we clone is hostile.
 
 **Defense.** Phase 4 clones in a **per-clone Docker / podman container** with
-no network and a tmpfs. Inside the container:
+network *only* for the clone step and a tmpfs. Inside the container:
 
 - `git clone --depth 1 --no-tags --filter=blob:none --no-recurse-submodules`.
 - Static parsing only — **never execute** anything from the repo. No
   `pip install`, no `python setup.py`, no test runs, no Python imports of
   repo modules.
 - Read only files within an allowlist of paths (`.claude/`, `skills/`,
-  `agents/`, `mcp.json`, `README*`, `LICENSE*`, top-level `.md`).
+  `agents/`, `prompts/`, `mcp.json`, `README*`, `LICENSE*`, top-level `.md`).
 - Resolve every path and reject anything that escapes the clone root via
   symlink.
-- Hard caps: per-file 1MB, total clone 100MB, file count 5000.
+- Hard caps: per-file 1 MB, total clone 100 MB, file count 5000. Cap
+  exceeded → emit partial result *with* a warning in the thread record;
+  never silently truncate. Symlink escape (container or host) → reject the
+  entire repo and log a `security-event`.
 
 The container is the boundary; the rules inside it are defense in depth.
+
+**Container flags (canonical).** `scout/_container.py` composes these and
+runtime selection (`docker` is v1; `podman` is a flag-stub that raises
+`NotImplementedError` for now). Drift on this list is a security regression
+and gets flagged in code review.
+
+```
+--rm                                 ephemeral, no persistent state
+--network bridge                     network for git clone only; nothing else
+                                     uses it
+--read-only                          root filesystem is immutable
+--tmpfs /work:size=120m,uid=65532    only writable area; sized just above
+                                     the 100 MB total-clone cap
+--memory 512m --cpus 1               resource caps
+--cap-drop ALL                       no Linux capabilities
+--security-opt no-new-privileges     setuid/setgid in the image can't elevate
+--pids-limit 256                     bounds fork bombs
+-u 65532                             non-root user inside the container
+-e REPO_URL=<sanitized-url>          the only thing the entrypoint reads
+```
+
+**Host-side re-validation.** The container writes a tar of allowlisted
+files to stdout; the host extracts it under `tempfile.TemporaryDirectory()`
+and **re-applies** the path allowlist and symlink-escape check on every
+entry before parsing. Never trust container output blindly — the container
+is one layer, the host walker is the second.
 
 ### 3. Network and parser attacks
 

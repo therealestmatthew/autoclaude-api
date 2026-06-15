@@ -2,10 +2,10 @@
 name: phase-4-repo-extractor
 title: "Phase 4 — Repo extractor"
 phase: 4
-status: draft
+status: done
 created_at: 2026-06-15
 updated_at: 2026-06-15
-completed_at:
+completed_at: 2026-06-15
 supersedes: []
 superseded_by:
 locked_decisions:
@@ -15,6 +15,12 @@ locked_decisions:
   - "Repo extraction is queue-triggered, not poll-triggered. Set here."
   - "Child slug convention: <repo-slug>--<child-name>. Set here."
   - "Child Candidates land in /scout/queue/, never directly in /catalog/. Set here."
+  - "Default container runtime: Docker only in v1. Podman is a flag stub that raises NotImplementedError (compose_command rejects it). Revisit in Phase 6."
+  - "Image distribution: local build only (`docker build scout/clone_runner/`). No registry dependency. RepoExtractor expects the image to be present locally; users build once."
+  - "Temp dir: `tempfile.TemporaryDirectory(prefix='scout-clone-')`. No leftover state on crash; no `tmp/scout/clones/` under the repo."
+  - "mcp.json parsing: one Candidate per `mcpServers` entry with slug `<repo>--mcp-<server-name>`. A generic mcp.json with no recognized servers map falls back to a single `<repo>--mcp` Candidate."
+  - "Plugin repos are leaf assets: we do NOT recurse into them to emit children of children. Plugin contents are described in the plugin asset body. Re-examine in Phase 6 if needed."
+  - "Container `/tmp` is on the read-only root FS; the entrypoint uses `mktemp -p /work` (the tmpfs) for its scratch files. Captured here because it's an easy-to-regress detail."
 ---
 
 # Phase 4 — Repo extractor
