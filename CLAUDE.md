@@ -152,3 +152,16 @@ When adding a new test, follow `/conventions/testing.md` for which directory it 
 - **Phase 6:** automated merge/dedup decisioning.
 - **Phase 7:** command-center observability (token burn, threads).
 - **Phase 8+:** consulting buildout.
+
+## Planning lineage
+
+The phase plan above is a high-level roadmap. The substantive design for each phase — requirements, locked decisions, task breakdown, open questions — lives in this repo under `/docs/plans/`. The lightweight priming prompt that a fresh Claude Code session reads at the start of a phase lives in `/docs/plans/session_prompts/` and points at its sibling plan document.
+
+**Rules:**
+
+- **Plans live in the repo, not on a local machine.** A plan at `~/.claude/plans/<name>.md` (or any other local-only path) is invisible to future sessions, to collaborators, and to the design history. Put the canonical plan at `/docs/plans/<phase-or-feature>.md`. If a planning tool produced a local artifact, copy it into the repo and reference *the in-repo path* from then on.
+- **Plans are kept forever.** When a phase is done, the plan is not deleted — it is marked complete (frontmatter `status: done`, `completed_at: <date>`) and stays in place. The design lineage is the audit trail for *why* we built things the way we built them; later phases routinely need to read prior plans to understand non-obvious decisions.
+- **Session prompts are short-lived.** They prime a fresh session, are valid only while a phase is in progress, and get renamed `<name>.done.md` (or moved to an archived state) once the phase commits. Plans persist; prompts do not.
+- **One plan per phase, named by phase.** `/docs/plans/phase-4-repo-extractor.md`. Mid-phase plans (a meaningful chunk that needs its own plan, e.g., a security baseline landing inside a phase) get their own file rather than mutating the phase plan in-place.
+
+See `/docs/plans/README.md` for the directory layout and frontmatter convention.
