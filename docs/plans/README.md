@@ -1,3 +1,11 @@
+---
+name: docs-plans-readme
+title: "/docs/plans/ — phase plans and design lineage"
+kind: readme
+status: active
+updated_at: 2026-06-15
+---
+
 # /docs/plans/
 
 Substantive plan documents for each phase (and any mid-phase chunk large enough to need its own plan). These are the design lineage of the program — kept forever, marked complete when done, never deleted.

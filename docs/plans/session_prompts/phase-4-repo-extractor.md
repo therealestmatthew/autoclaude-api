@@ -1,3 +1,14 @@
+---
+name: phase-4-repo-extractor-prompt
+title: "Session prompt — Phase 4 (repo extractor + container sandbox)"
+kind: session-prompt
+phase: 4
+status: active
+related: [phase-4-repo-extractor]
+created_at: 2026-06-15
+updated_at: 2026-06-15
+---
+
 # Session prompt — Phase 4 (repo extractor + per-clone container sandbox)
 
 Paste the block below as your opening message to a fresh Claude Code session in `/code/autoclaude`. The substantive plan is canonical in-repo at `/docs/plans/phase-4-repo-extractor.md`; this prompt just sequences the cold-start reads.

@@ -1,3 +1,15 @@
+---
+name: phase-3-completion-prompt
+title: "Session prompt — finish Phase 3 (HN / Lobsters / Reddit + security baseline)"
+kind: session-prompt
+phase: 3
+status: done
+related: [phase-3-scout-v2-security]
+created_at: 2026-06-14
+updated_at: 2026-06-15
+completed_at: 2026-06-14
+---
+
 # Session prompt — finish Phase 3 (HN / Lobsters / Reddit + security baseline)
 
 Paste the block below as your opening message to a fresh Claude Code session

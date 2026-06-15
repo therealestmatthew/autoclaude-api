@@ -1,3 +1,11 @@
+---
+name: consulting-templates-readme
+title: "/consulting/templates/ — engagement template catalog"
+kind: readme
+status: active
+updated_at: 2026-06-15
+---
+
 # /consulting/templates/
 
 Fill-in-the-blank documents reused across engagements. Each template is a single `.md` file with frontmatter and `{{placeholder}}` markers.

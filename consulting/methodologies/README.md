@@ -1,3 +1,11 @@
+---
+name: consulting-methodologies-readme
+title: "/consulting/methodologies/ — reusable how-tos"
+kind: readme
+status: active
+updated_at: 2026-06-15
+---
+
 # /consulting/methodologies/
 
 The reusable *how* of the consulting work. Each methodology is a markdown document describing a repeatable practice — discovery, delivery, estimation, status cadence, etc.

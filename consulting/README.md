@@ -1,3 +1,11 @@
+---
+name: consulting-readme
+title: "/consulting/ — the practice"
+kind: readme
+status: active
+updated_at: 2026-06-15
+---
+
 # /consulting/
 
 The consulting & software-delivery business. The reusable IP and the operational history of engagements.

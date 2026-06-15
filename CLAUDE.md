@@ -1,3 +1,11 @@
+---
+name: claude-md
+title: "CLAUDE.md — operating brief for Claude Code in this repo"
+kind: convention
+status: active
+updated_at: 2026-06-15
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
