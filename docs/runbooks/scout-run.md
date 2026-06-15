@@ -1,0 +1,236 @@
+---
+name: scout-run
+title: "Run the scout and review the queue"
+when_to_run: "Whenever you want fresh discovery candidates from HN, Lobsters, Reddit, or curated awesome-lists — typically daily, but the cursors keep state so a missed day just means a bigger next batch."
+last_used:
+last_verified: 2026-06-15
+---
+
+# Run the scout
+
+The scout polls configured sources, dedups against `/catalog/`, and writes one
+markdown file per surviving candidate to `/scout/queue/`. You then review the
+queue by hand and either merge candidates into `/catalog/` or discard them.
+
+This runbook covers the full loop: setup → run → review → cleanup.
+
+---
+
+## 0. One-time setup
+
+```sh
+# In the repo root.
+uv sync
+```
+
+This creates `.venv/` and installs runtime + dev dependencies. Re-run after
+pulling a commit that changes `pyproject.toml` or `uv.lock`.
+
+You don't activate the venv by hand — every command below uses `uv run`,
+which evaluates against the project venv each time.
+
+**Verify.** `uv run scout --help` prints usage without error.
+
+---
+
+## 1. Run the scout
+
+### 1a. All enabled sources
+
+```sh
+uv run scout run -v
+```
+
+**Expected output (shape):**
+
+```
+[scout] <N> URLs known to catalog
+[scout] hackernews: queued=<X> skipped_catalog=<Y>
+[scout] lobsters:   queued=<X> skipped_catalog=<Y>
+[scout] reddit:     queued=<X> skipped_catalog=<Y>
+[scout] awesome-lists: queued=<X> skipped_catalog=<Y>
+scout-<YYYY-MM-DD>-<HHMMSS>: queued=<TOTAL> skipped_catalog=<TOTAL> errors=0
+```
+
+Exit code is `0` on success, `1` if any per-source error landed in the
+top-level stats `errors` list.
+
+### 1b. One source at a time
+
+Useful when you're iterating on a single extractor or one source is rate-
+limiting and you don't want to retry the others.
+
+```sh
+uv run scout run -s hackernews -v
+uv run scout run -s lobsters -v
+uv run scout run -s reddit -v
+uv run scout run -s awesome-lists -v
+```
+
+The slug matches the YAML filename stem in `/scout/sources/<slug>.yaml`.
+
+### 1c. Force a "from-scratch" run
+
+Cursors live in `/scout/state/<source>.json`. Delete the file for the
+source(s) you want to reset and the next run starts from the beginning of
+each source's history (or as far back as the source itself exposes).
+
+```sh
+rm /scout/state/hackernews.json   # reset the HN cursor only
+```
+
+**Warning.** This will re-queue every previously-seen candidate that the
+source still returns. Expect a large queue on the next run. The catalog
+dedup will still suppress anything already in `/catalog/`, but you'll have
+to triage everything else again.
+
+---
+
+## 2. Review the queue
+
+Candidates land in `/scout/queue/<date>-<slug>-<hash>.md`. Each file is
+self-contained — frontmatter has provenance, body is reviewer notes.
+
+### 2a. Skim the queue
+
+```sh
+ls /scout/queue/ | wc -l                          # how many
+ls -t /scout/queue/ | head -20                    # most recent
+```
+
+### 2b. Open and decide
+
+Open one queue file at a time. For each:
+
+1. Read the title and `source.url`. Does this look like an artifact we'd
+   want in `/catalog/`?
+2. Click through to `scout.raw_url` if you need discussion context.
+3. Decide:
+   - **Keep** → write a `<slug>.md` in `/catalog/` (use `/catalog/_schema/`
+     and `/catalog/_examples/` as references). See
+     `/conventions/merge-rules.md` for whether to create new or merge into
+     an existing asset.
+   - **Discard** → just `rm` the queue file.
+   - **Merge** → update the existing `/catalog/<slug>.md` (add an alternate
+     URL, bump tags, etc.), then `rm` the queue file.
+
+### 2c. Inspect what the candidate looks like
+
+```sh
+cat /scout/queue/<file>.md
+```
+
+Frontmatter you can trust the scout to have filled in:
+
+- `name`, `kind`, `title`, `status: draft`
+- `source.{type,url}` — the artifact's primary URL
+- `discovered.{via,on,run_id}` — provenance
+- `scout.raw_url` — discussion or list URL (e.g. the HN item, the Lobsters
+  thread, the Reddit permalink)
+- `scout.score` (HN/Reddit only) — original platform score, useful for
+  prioritization
+
+Everything else (tags, source.authors beyond the first, source.license,
+relations) is up to the reviewer.
+
+---
+
+## 3. Clean up the queue
+
+Once you've reviewed everything, the queue should be empty (or contain only
+items you want to defer). The queue itself is gitignored — only the
+`README.md` and `_template.md` are tracked.
+
+```sh
+ls /scout/queue/ | grep -v -E '^(README|_template)\.md$' | wc -l
+```
+
+Expected: `0` after a full review pass.
+
+---
+
+## Troubleshooting
+
+### `403 Blocked` from Reddit
+
+Seen on every sub when running from a residential / cloud IP without auth.
+Reddit's anti-scraping is hostile to anonymous `*.reddit.com/r/<sub>/new.json`
+requests.
+
+**Verify.** Check `/scout/state/reddit.json` — the errors are recorded under
+`stats.sub_errors`, the run still completes with `outcome: ok` because the
+extractor swallows the per-sub HTTP error rather than blowing up the run.
+
+**Workarounds (not yet implemented):**
+
+- Set up OAuth via Reddit's "script" app type and route the extractor
+  through `https://oauth.reddit.com/`.
+- Switch the extractor to a public mirror or a different listing API.
+
+Until one of those lands, `scout run -s reddit` is expected to queue 0.
+Don't treat it as a regression.
+
+### Lobsters queues 0
+
+Most days the strict keyword filter (`claude code`, `claude-code`,
+`anthropic`, `mcp server`, `agent sdk`) doesn't match anything in
+`/t/ai.rss` or `/t/programming.rss`. This is the source being low-volume,
+not a bug.
+
+**Verify.** `curl -s -A "autoclaude-scout/0.1.0" https://lobste.rs/t/ai.rss
+| grep -oE '<title>[^<]*</title>' | head -20` lists current titles. If none
+of them contain a keyword from `scout/sources/lobsters.yaml`, queue=0 is
+correct.
+
+**Loosen the filter** by editing `match.any_of` in `scout/sources/lobsters.yaml`
+— but expect higher noise.
+
+### HN queued thousands on the first run
+
+Expected. The HN Algolia API returns up to 100 hits per query term, the
+default config has ~8 terms, and on a cold cursor every hit qualifies. The
+cursor advances to the highest `created_at_i` seen, so the next run is
+small.
+
+If you want a smaller first batch, raise `min_points` in
+`scout/sources/hackernews.yaml` temporarily, then lower it back.
+
+### `UnsafeURLError` / `ResponseTooLargeError` in the per-source state
+
+These come from `scout/_security.py` rejecting an unsafe URL (e.g. a
+redirect to a private IP) or a response that exceeds the byte cap. They are
+recorded in the per-source `state.stats` (`list_errors`, `term_errors`,
+`feed_errors`, `sub_errors` depending on the extractor) and **do not** halt
+the run. The catalog will simply not get the rejected item.
+
+**Verify.** Look at `/scout/state/<source>.json` and the per-source error
+list. If the URL there is one you trust, investigate the redirect chain;
+otherwise the rejection is correct behavior.
+
+### Exit code 1 from `scout run`
+
+The runner returns `1` if any *top-level* error landed in `stats.errors` —
+usually a source whose YAML had an unknown `type:`. Per-source extractor
+errors (HTTP, parse, security) are recorded inside per-source state and
+**do not** trigger exit 1; the run is still considered "partial-ok".
+
+```sh
+uv run scout run -v
+echo $?     # 0 = clean, 1 = top-level error
+```
+
+If you see `1`, the stderr lines starting with `!` name the failing source.
+Check that the YAML's `type:` matches a key in `EXTRACTOR_REGISTRY` in
+`scout/agent/runner.py`.
+
+---
+
+## What this runbook does NOT cover
+
+- **Promoting a queue item to `/catalog/`.** See `/conventions/merge-rules.md`
+  and `/catalog/_schema/asset.schema.md`.
+- **Adding a new source.** Add the YAML in `/scout/sources/`, write an
+  extractor, register it in `scout/agent/runner.py`. See the Phase 3 commit
+  (`be5809a`) for the full pattern.
+- **Operating the system (rotating credentials, restoring state from
+  corruption).** Those runbooks live in `/command-center/runbooks/`.
