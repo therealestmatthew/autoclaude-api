@@ -13,14 +13,17 @@ dependencies = [
   "pyyaml>=6.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-  "ruff",
-  "pytest",
-]
-
 [project.scripts]
 scout = "scout.agent.cli:main"
+
+# PEP 735 dependency groups. `uv sync` installs the runtime deps + the `dev`
+# group by default; `uv sync --no-dev` skips the group for a slim runtime
+# install. Add more groups (`docs`, `bench`, ...) as needs appear.
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -28,6 +31,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["scout", "scout.agent", "scout.extractors"]
+
+[tool.uv]
+# Default groups installed by `uv sync` (in addition to runtime deps).
+default-groups = ["dev"]
 
 [tool.ruff]
 line-length = 100
@@ -40,3 +47,8 @@ ignore = []
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+# Declared so `pytest --strict-markers` doesn't warn. The integration marker
+# is auto-applied to anything under tests/integration/ via that dir's conftest.
+markers = [
+  "integration: end-to-end tests that exercise the runner against an isolated filesystem.",
+]

@@ -80,27 +80,32 @@ Phase 0 is human-in-the-loop. Don't auto-merge.
 
 ### Setup (one time)
 
-```sh
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
-```
-
-### Commands
+Install [uv](https://docs.astral.sh/uv/), then:
 
 ```sh
-.venv/bin/scout run                       # run all enabled sources, write candidates to /scout/queue/
-.venv/bin/scout run -v                    # verbose
-.venv/bin/scout run -s awesome-lists      # one source by slug (matches /scout/sources/<slug>.yaml)
-
-.venv/bin/pytest                          # run the test suite
-.venv/bin/pytest tests/test_util.py       # single file
-.venv/bin/pytest -k slugify               # filter by name
-
-.venv/bin/ruff check scout/ tests/        # lint
-.venv/bin/ruff check scout/ tests/ --fix  # autofix safe issues
+uv sync                            # creates .venv, installs runtime + dev group
+uv sync --no-dev                   # runtime deps only
 ```
 
-`scout` is exposed as a console script via `pyproject.toml`. After `pip install -e .` you can also use `python -m scout.agent.cli run`.
+### Commands (all via `uv run`, no manual venv activation)
+
+```sh
+uv run scout run                          # all enabled sources, writes to /scout/queue/
+uv run scout run -v                       # verbose
+uv run scout run -s awesome-lists         # one source by slug (matches /scout/sources/<slug>.yaml)
+
+uv run pytest                             # full suite (unit + integration)
+uv run pytest tests/unit                  # unit only
+uv run pytest tests/integration           # integration only
+uv run pytest -m "not integration"        # marker-based filter (equivalent to unit-only)
+uv run pytest -k slugify                  # filter by name substring
+
+uv run ruff check scout/ tests/           # lint
+uv run ruff check scout/ tests/ --fix     # autofix safe issues
+```
+
+`scout` is exposed as a console script via `pyproject.toml`. The full testing
+protocol lives in `/conventions/testing.md`.
 
 ### Conventions
 
@@ -124,10 +129,17 @@ scout/                    Python package
   sources/                YAML configs (data, not Python)
   state/                  per-source persisted state (gitignored at runtime)
   queue/                  candidate markdown files (gitignored at runtime)
-tests/                    pytest, mirrors scout/ structure
+tests/
+  conftest.py             shared fixtures (sample_candidate, mock httpx factory)
+  unit/                   fast, isolated, contract-level tests
+  integration/            multi-module flows with isolated filesystem (no network)
+    conftest.py           scout_world fixture + auto-applies `integration` marker
+  fixtures/               static sample inputs reused across tests
 ```
 
 The `scout/` directory mixes Python code and data dirs by design — the per-source YAML configs and the queue/state runtime data live next to the code that produces and consumes them. Don't move to a `src/` layout without a strong reason.
+
+When adding a new test, follow `/conventions/testing.md` for which directory it belongs in and what fixtures to reuse.
 
 ## Phase plan
 
