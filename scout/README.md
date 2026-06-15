@@ -25,8 +25,8 @@ The discovery pipeline. Watches a set of external sources, queues candidates for
 - [sources/](sources/) — declarative configs for each discovery source.
 - [state/](state/) — per-source cursors and dedup state (gitignored).
 - [queue/](queue/) — candidate markdown files awaiting human review (mostly gitignored — see queue/README).
-- [agent/](agent/) — Python agent entry point (empty in Phase 0).
-- [extractors/](extractors/) — per-source parsers + the GitHub repo extractor (empty in Phase 0).
+- [agent/](agent/) — Python agent: `types.py`, `runner.py`, `cli.py`. Exposes the `scout` console script.
+- [extractors/](extractors/) — per-source parsers. `awesome_list.py` ships in Phase 2; the rest land per the roadmap.
 
 ## Design notes
 

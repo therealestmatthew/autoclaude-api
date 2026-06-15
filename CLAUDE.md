@@ -78,18 +78,63 @@ Phase 0 is human-in-the-loop. Don't auto-merge.
 
 ## Working in this repo
 
-- **No build / test / lint commands yet.** Phase 0 is markdown only. When Python agents land, commands go in this section.
+### Setup (one time)
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+```
+
+### Commands
+
+```sh
+.venv/bin/scout run                       # run all enabled sources, write candidates to /scout/queue/
+.venv/bin/scout run -v                    # verbose
+.venv/bin/scout run -s awesome-lists      # one source by slug (matches /scout/sources/<slug>.yaml)
+
+.venv/bin/pytest                          # run the test suite
+.venv/bin/pytest tests/test_util.py       # single file
+.venv/bin/pytest -k slugify               # filter by name
+
+.venv/bin/ruff check scout/ tests/        # lint
+.venv/bin/ruff check scout/ tests/ --fix  # autofix safe issues
+```
+
+`scout` is exposed as a console script via `pyproject.toml`. After `pip install -e .` you can also use `python -m scout.agent.cli run`.
+
+### Conventions
+
 - **Prefer editing existing assets over creating new ones.** If a new entry would substantially overlap an existing one, propose a merge instead.
 - **Don't create README.md or doc files outside the conventions.** Every directory already has a README that defines what belongs in it. Update that README rather than adding sibling docs.
 - **Keep the catalog clean.** Drafts and raw finds live in `/scout/queue/`. Only reviewed assets land in `/catalog/`.
 - **When in doubt about a convention**, read `/conventions/` first. If the answer isn't there, ask before inventing.
 
+### Python package layout
+
+```
+scout/                    Python package
+  _util.py                slugify, canonical_github_url, parse_frontmatter
+  agent/
+    types.py              Candidate, SourceState, per-source config models
+    runner.py             run_once orchestrator
+    cli.py                argparse entry point (exposes `scout` script)
+  extractors/
+    base.py               Extractor Protocol
+    awesome_list.py       Phase 2 extractor
+  sources/                YAML configs (data, not Python)
+  state/                  per-source persisted state (gitignored at runtime)
+  queue/                  candidate markdown files (gitignored at runtime)
+tests/                    pytest, mirrors scout/ structure
+```
+
+The `scout/` directory mixes Python code and data dirs by design — the per-source YAML configs and the queue/state runtime data live next to the code that produces and consumes them. Don't move to a `src/` layout without a strong reason.
+
 ## Phase plan
 
-- **Phase 0 (now):** scaffold, conventions, schema, seed examples.
-- **Phase 1:** hand-curate the catalog with assets we already use.
-- **Phase 2:** scout v1 — awesome-list parser.
-- **Phase 3:** scout v2 — HN / Reddit / Lobsters.
+- **Phase 0 (done):** scaffold, conventions, schema, seed examples.
+- **Phase 1 (done):** hand-curate the catalog with assets we already use.
+- **Phase 2 (done):** scout v1 — awesome-list extractor + runner + queue + thread log.
+- **Phase 3:** scout v2 — HN / Reddit / Lobsters extractors.
 - **Phase 4:** repo extractor (GitHub URL → child assets).
 - **Phase 5:** X / Twitter ingestion.
 - **Phase 6:** automated merge/dedup decisioning.

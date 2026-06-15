@@ -26,7 +26,7 @@ discovery sources  →  /scout/queue/  →  human review  →  /catalog/
 
 ## Status
 
-Phase 0 — scaffolding, conventions, and catalog schema. No agent code yet. See `/conventions/` for how to write to the repo, and `/catalog/_schema/` for the asset shape.
+Phase 2 shipped — awesome-list scout extractor end-to-end (runner, queue, state, thread log). Catalog seeded with eight real assets from the installed Claude Code stack. See `CLAUDE.md` for setup and commands, `/conventions/` for how to write to the repo, and `/catalog/_schema/` for the asset shape.
 
 ## For Claude Code
 

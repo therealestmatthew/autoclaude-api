@@ -1,6 +1,6 @@
 name: reddit
 type: reddit
-enabled: true
+enabled: false   # flip on in Phase 3 when the reddit extractor lands
 poll_interval_minutes: 120
 
 # Subreddits to scan. The extractor will hit the /new.json endpoint per sub.

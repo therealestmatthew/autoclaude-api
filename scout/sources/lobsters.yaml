@@ -1,6 +1,6 @@
 name: lobsters
 type: lobsters
-enabled: true
+enabled: false   # flip on in Phase 3 when the lobsters extractor lands
 poll_interval_minutes: 120
 
 # Lobste.rs offers per-tag RSS feeds.

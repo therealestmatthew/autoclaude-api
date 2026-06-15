@@ -1,6 +1,6 @@
 # /scout/extractors/
 
-Per-source parsers. **Empty in Phase 0.** Each extractor is responsible for one source `type` (matching the `type:` field in `/scout/sources/*.yaml`).
+Per-source parsers. Each extractor is responsible for one source `type` (matching the `type:` field in `/scout/sources/*.yaml`).
 
 ## Extractor contract
 
@@ -16,14 +16,14 @@ class Extractor(Protocol):
 
 ## Extractors planned
 
-| Type           | Source                                  | Phase |
-| -------------- | --------------------------------------- | ----- |
-| `awesome-list` | Markdown lists at known URLs            | 2     |
-| `hackernews`   | Algolia search API                      | 3     |
-| `lobsters`     | Per-tag RSS                             | 3     |
-| `reddit`       | `/r/<sub>/new.json`                     | 3     |
-| `github-repo`  | `git clone <url>` + tree walk           | 4     |
-| `x`            | Twitter/X API (decision pending)        | 5     |
+| Type           | Source                                  | Status                          |
+| -------------- | --------------------------------------- | ------------------------------- |
+| `awesome-list` | Markdown lists at known URLs            | **Phase 2 — `awesome_list.py`** |
+| `hackernews`   | Algolia search API                      | Phase 3                         |
+| `lobsters`     | Per-tag RSS                             | Phase 3                         |
+| `reddit`       | `/r/<sub>/new.json`                     | Phase 3                         |
+| `github-repo`  | `git clone <url>` + tree walk           | Phase 4                         |
+| `x`            | Twitter/X API (decision pending)        | Phase 5                         |
 
 `github-repo` is special — it's not a *discovery* extractor; it's invoked when any other extractor surfaces a `github.com/*` URL. It clones the repo and proposes child assets (agents, skills, plugins, MCPs, prompts) from the tree.
 
