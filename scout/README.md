@@ -26,7 +26,7 @@ The discovery pipeline. Watches a set of external sources, queues candidates for
 - [state/](state/) — per-source cursors and dedup state (gitignored).
 - [queue/](queue/) — candidate markdown files awaiting human review (mostly gitignored — see queue/README).
 - [agent/](agent/) — Python agent: `types.py`, `runner.py`, `cli.py`. Exposes the `scout` console script.
-- [extractors/](extractors/) — per-source parsers. `awesome_list.py` ships in Phase 2; the rest land per the roadmap.
+- [extractors/](extractors/) — per-source parsers. Phase 3 shipped `hackernews.py`, `lobsters.py`, `reddit.py` alongside the Phase 2 `awesome_list.py`. All four use the security helpers in `scout/_security.py`. The Phase 4 `github-repo` extractor lands next.
 
 ## Design notes
 

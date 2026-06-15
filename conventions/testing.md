@@ -88,6 +88,30 @@ is noise. Delete it.
 When the suite slows down, find the slow test and split or rework it. Slow
 suites get skipped, then untrustworthy, then deleted.
 
+## Security tests for extractors
+
+Every new extractor (anything that fetches untrusted content from the public
+internet) **must** ship with at least one adversarial unit test that
+demonstrates the security helpers from `scout/_security.py` are wired
+correctly. This is a merge gate, not a nice-to-have — the helpers are only
+load-bearing if the test would fail when they're removed.
+
+Pick at least one of the following per extractor:
+
+- **Oversized response** — fixture exceeds `safe_get_bytes`'s `max_bytes`
+  cap; assert `ResponseTooLargeError` is raised, OR is caught by the
+  extractor and recorded in `state.stats[...errors]`.
+- **Hidden Unicode in a title** — fixture title contains a bidirectional
+  override (`U+202E`), zero-width joiner (`U+200B`), or null byte; assert the
+  yielded `Candidate.title` no longer contains it.
+- **Redirect to a private IP** — `httpx.MockTransport` returns a 3xx to
+  `http://127.0.0.1/` (or `10.0.0.0/8`); assert `UnsafeURLError` is raised
+  pre- or post-redirect, OR caught and recorded in `state.stats[...errors]`.
+
+A single test that exercises one case is enough — the goal is to lock in
+that the helpers run on real input, not to re-test the helpers (their own
+coverage lives in `tests/unit/test_security.py`).
+
 ## Static fixtures
 
 `tests/fixtures/` holds reusable static input — markdown samples, sample YAML

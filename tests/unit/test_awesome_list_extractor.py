@@ -128,3 +128,20 @@ def test_no_links_yields_nothing():
     extractor = _mock_extractor(payload="# Empty list\n\nNo links here.")
     state = SourceState(source="awesome-lists")
     assert list(extractor.fetch(_source(), state, run_id="test-run")) == []
+
+
+def test_title_with_bidi_override_is_sanitized():
+    # U+202E RIGHT-TO-LEFT OVERRIDE hidden inside a link title — the kind of
+    # payload a malicious awesome-list entry could carry to mask one URL as
+    # another in agent or human reviewer context.
+    poisoned = (
+        "## Tools\n"
+        "- [evil‮title](https://github.com/mallory/evil) — payload.\n"
+    )
+    extractor = _mock_extractor(payload=poisoned)
+    state = SourceState(source="awesome-lists")
+    cand = next(iter(extractor.fetch(_source(), state, run_id="test-run")))
+    assert "‮" not in cand.title
+    assert "‮" not in cand.raw_title
+    # Sanity: the visible characters survive.
+    assert "evil" in cand.title

@@ -146,8 +146,8 @@ When adding a new test, follow `/conventions/testing.md` for which directory it 
 - **Phase 0 (done):** scaffold, conventions, schema, seed examples.
 - **Phase 1 (done):** hand-curate the catalog with assets we already use.
 - **Phase 2 (done):** scout v1 — awesome-list extractor + runner + queue + thread log.
-- **Phase 3:** scout v2 — HN / Reddit / Lobsters extractors.
-- **Phase 4:** repo extractor (GitHub URL → child assets).
+- **Phase 3 (done):** scout v2 — HN / Reddit / Lobsters extractors on the Phase 3.0 security baseline (`scout/_security.py`, `conventions/security.md`).
+- **Phase 4:** repo extractor (GitHub URL → child assets), running each clone in a per-clone Docker / podman container per `/conventions/security.md`.
 - **Phase 5:** X / Twitter ingestion.
 - **Phase 6:** automated merge/dedup decisioning.
 - **Phase 7:** command-center observability (token burn, threads).

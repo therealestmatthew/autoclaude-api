@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Lobsters: tag ai</title>
+    <link>https://lobste.rs/t/ai</link>
+    <description>Stories tagged ai</description>
+    <item>
+      <title>A new claude code skill manager</title>
+      <link>https://github.com/alice/claude-skill-manager</link>
+      <comments>https://lobste.rs/s/abcde1/claude_skill_manager</comments>
+      <pubDate>Wed, 04 Jun 2025 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Some unrelated programming post</title>
+      <link>https://example.com/programming-post</link>
+      <comments>https://lobste.rs/s/abcde2/programming_post</comments>
+      <pubDate>Wed, 04 Jun 2025 11:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>Anthropic publishes a paper</title>
+      <link>https://example.com/anthropic-paper</link>
+      <comments>https://lobste.rs/s/abcde3/anthropic_paper</comments>
+      <pubDate>Wed, 04 Jun 2025 12:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>claude​ code with hidden zwj</title>
+      <link>https://github.com/mallory/zw-evil</link>
+      <comments>https://lobste.rs/s/abcde4/zw_evil</comments>
+      <pubDate>Wed, 04 Jun 2025 13:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>

@@ -10,6 +10,7 @@ The rulebook. Every other directory's README points back here for the *how* of w
 - [merge-rules.md](merge-rules.md) — how to decide merge vs new vs discard when reviewing a scout candidate.
 - [contribution.md](contribution.md) — the writing flow: where things start, how they get reviewed, where they end up.
 - [testing.md](testing.md) — how we write tests: unit vs integration directories, fixtures, markers, speed budget.
+- [security.md](security.md) — threat model + defenses for ingesting untrusted content (sanitization, URL safety, bounded GET, defusedxml, repo-clone sandboxing).
 
 ## Principles
 

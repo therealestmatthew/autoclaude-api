@@ -1,0 +1,73 @@
+{
+  "kind": "Listing",
+  "data": {
+    "after": null,
+    "children": [
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc001",
+          "title": "I built a claude code skill for refactoring",
+          "url": "https://github.com/alice/claude-refactor-skill",
+          "permalink": "/r/ClaudeCode/comments/abc001/i_built/",
+          "is_self": false,
+          "author": "alice_user",
+          "score": 87,
+          "created_utc": 1717000000
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc002",
+          "title": "Discussion: how do you organize claude prompts?",
+          "url": "https://www.reddit.com/r/ClaudeCode/comments/abc002/",
+          "permalink": "/r/ClaudeCode/comments/abc002/discussion/",
+          "is_self": true,
+          "author": "bob_user",
+          "score": 12,
+          "created_utc": 1717000100
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc003",
+          "title": "Anthropic dropped a new article on claude agents",
+          "url": "https://www.anthropic.com/research/agents",
+          "permalink": "/r/ClaudeCode/comments/abc003/anthropic/",
+          "is_self": false,
+          "author": "carol_user",
+          "score": 54,
+          "created_utc": 1717000200
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc004",
+          "title": "my claude meme",
+          "url": "https://i.redd.it/abcdef.jpg",
+          "permalink": "/r/ClaudeCode/comments/abc004/meme/",
+          "is_self": false,
+          "author": "dave_user",
+          "score": 3,
+          "created_utc": 1717000300
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "abc005",
+          "title": "claude​code with hidden zwsp",
+          "url": "https://github.com/mallory/zw-claude",
+          "permalink": "/r/ClaudeCode/comments/abc005/zw/",
+          "is_self": false,
+          "author": "mallory",
+          "score": 33,
+          "created_utc": 1717000400
+        }
+      }
+    ]
+  }
+}

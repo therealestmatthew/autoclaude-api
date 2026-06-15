@@ -21,9 +21,15 @@ import yaml
 
 from .._util import canonical_github_url, parse_frontmatter
 from ..extractors.awesome_list import AwesomeListExtractor
+from ..extractors.hackernews import HackerNewsExtractor
+from ..extractors.lobsters import LobstersExtractor
+from ..extractors.reddit import RedditExtractor
 from .types import (
     AwesomeListSource,
     Candidate,
+    HackerNewsSource,
+    LobstersSource,
+    RedditSource,
     SourceState,
 )
 
@@ -38,11 +44,17 @@ THREADS_DIR = REPO_ROOT / "command-center" / "threads"
 # One entry per supported source `type:`. New extractors register here.
 EXTRACTOR_REGISTRY: dict[str, object] = {
     "awesome-list": AwesomeListExtractor(),
+    "hackernews": HackerNewsExtractor(),
+    "lobsters": LobstersExtractor(),
+    "reddit": RedditExtractor(),
 }
 
 # How to parse a source config of a given type into its pydantic model.
 SOURCE_MODELS: dict[str, type] = {
     "awesome-list": AwesomeListSource,
+    "hackernews": HackerNewsSource,
+    "lobsters": LobstersSource,
+    "reddit": RedditSource,
 }
 
 

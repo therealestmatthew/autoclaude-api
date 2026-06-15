@@ -26,7 +26,7 @@ discovery sources  →  /scout/queue/  →  human review  →  /catalog/
 
 ## Status
 
-Phase 2 shipped — awesome-list scout extractor end-to-end (runner, queue, state, thread log). Catalog seeded with eight real assets from the installed Claude Code stack. See `CLAUDE.md` for setup and commands, `/conventions/` for how to write to the repo, and `/catalog/_schema/` for the asset shape.
+Phase 3 shipped — three social/list sources (HackerNews, Lobste.rs, Reddit) feeding the catalog queue, all wired through a Phase 3.0 security baseline (`scout/_security.py` + `/conventions/security.md`). Catalog seeded with eight real assets from the installed Claude Code stack. See `CLAUDE.md` for setup and commands, `/conventions/` for how to write to the repo, and `/catalog/_schema/` for the asset shape.
 
 ## For Claude Code
 

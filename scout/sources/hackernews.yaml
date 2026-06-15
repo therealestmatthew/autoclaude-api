@@ -1,6 +1,6 @@
 name: hackernews
 type: hackernews
-enabled: false   # flip on in Phase 3 when the hackernews extractor lands
+enabled: true
 poll_interval_minutes: 60
 
 # HN Algolia search endpoint; the extractor will paginate.

@@ -1,12 +1,12 @@
 """Awesome-list extractor.
 
-Fetches markdown README(s) of curated lists, parses out links, filters to
-GitHub repository URLs, dedups against the source's persisted `seen_urls`, and
-yields a Candidate per new link.
+Fetches markdown README(s) of curated lists, parses out `[text](url)` links,
+keeps only useful GitHub repo URLs, dedups against the source's persisted
+`seen_urls`, and yields a Candidate per new link.
 
-GitHub-only filtering is intentional for Phase 2 — most signal in
-awesome-claude-code et al. is GitHub-hosted, and broadening the filter later
-is a one-line change once we know what we're missing.
+GitHub-only filtering is intentional — most signal in awesome-claude-code et al.
+is GitHub-hosted, and links to project websites are usually less valuable to
+catalog than the underlying repos.
 """
 
 from __future__ import annotations
@@ -17,29 +17,17 @@ from datetime import date
 
 import httpx
 
-from .._util import slugify
+from .._security import SecurityError, safe_get_bytes, sanitize_text
+from .._util import classify_url, slugify
 from ..agent.types import (
     AwesomeListSource,
     Candidate,
     SourceState,
 )
 
-# Matches a markdown inline link `[text](url)`. The URL group disallows
-# whitespace and unbalanced parens to avoid swallowing trailing prose.
+# Markdown inline link `[text](url)`. URL group disallows whitespace and `)` so
+# we don't swallow trailing prose like `... (alt text)`.
 _LINK = re.compile(r"\[([^\]]+)\]\((https?://[^\s)]+)\)")
-
-# Only emit candidates for what looks like a GitHub repo (owner/repo, possibly
-# with trailing path). The owner/repo names disallow further slashes here so we
-# match the *repo* portion cleanly; extra path is preserved on the URL itself.
-_GITHUB_REPO_URL = re.compile(
-    r"^https?://github\.com/[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+(?:[/?#]|$)"
-)
-
-# URLs that look like a repo but aren't useful asset targets.
-_NOT_USEFUL = re.compile(
-    r"https?://github\.com/(?:sponsors|topics|search|orgs|features|"
-    r"marketplace|trending|notifications|settings)(?:/|$)"
-)
 
 
 class AwesomeListExtractor:
@@ -63,21 +51,23 @@ class AwesomeListExtractor:
         today = date.today().isoformat()
         for lst in source.lists:
             try:
-                resp = self._client.get(lst.url)
-                resp.raise_for_status()
-                content = resp.text
-            except Exception as e:
-                # External boundary: record and move on. Don't let one bad list
-                # poison the run.
+                content = safe_get_bytes(self._client, lst.url).decode(
+                    "utf-8", errors="replace"
+                )
+            except (SecurityError, httpx.HTTPError) as e:
                 state.stats.setdefault("list_errors", []).append(
                     {"list": lst.name, "url": lst.url, "error": str(e), "at": today}
                 )
                 continue
 
             for match in _LINK.finditer(content):
-                title = match.group(1).strip()
-                url = match.group(2).strip().rstrip(".,")  # strip stray punctuation
-                if not _is_useful_url(url):
+                title = sanitize_text(match.group(1), max_length=300)
+                url = match.group(2).strip().rstrip(".,")
+                if not title:
+                    continue
+                classification = classify_url(url)
+                # Awesome-list policy: GitHub repos only.
+                if classification is None or classification[0] != "repo":
                     continue
                 if url in state.seen_urls:
                     continue
@@ -94,9 +84,3 @@ class AwesomeListExtractor:
                     raw_title=title,
                     raw_url=lst.url,
                 )
-
-
-def _is_useful_url(url: str) -> bool:
-    if not _GITHUB_REPO_URL.match(url):
-        return False
-    return not _NOT_USEFUL.match(url)

@@ -1,0 +1,44 @@
+{
+  "hits": [
+    {
+      "objectID": "39000001",
+      "title": "Show HN: foo, a Claude Code skill manager",
+      "url": "https://github.com/alice/foo",
+      "author": "alice",
+      "points": 42,
+      "created_at_i": 1717000000
+    },
+    {
+      "objectID": "39000002",
+      "title": "Ask HN: best way to wire claude-code into CI?",
+      "url": null,
+      "author": "bob",
+      "points": 5,
+      "created_at_i": 1717000100
+    },
+    {
+      "objectID": "39000003",
+      "title": "Anthropic blog: a deep dive on agents",
+      "url": "https://example.com/post",
+      "author": "carol",
+      "points": 30,
+      "created_at_i": 1717000200
+    },
+    {
+      "objectID": "39000004",
+      "title": "Tiny utility nobody cares about",
+      "url": "https://example.com/tiny",
+      "author": "dave",
+      "points": 2,
+      "created_at_i": 1717000300
+    },
+    {
+      "objectID": "39000005",
+      "title": "evil‮title for an agent context",
+      "url": "https://github.com/mallory/evil",
+      "author": "mallory",
+      "points": 50,
+      "created_at_i": 1717000400
+    }
+  ]
+}
