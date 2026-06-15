@@ -1,0 +1,20 @@
+name: lobsters
+type: lobsters
+enabled: true
+poll_interval_minutes: 120
+
+# Lobste.rs offers per-tag RSS feeds.
+feeds:
+  - https://lobste.rs/t/ai.rss
+  - https://lobste.rs/t/programming.rss
+
+match:
+  any_of:
+    - claude code
+    - claude-code
+    - anthropic
+    - mcp server
+    - agent sdk
+
+notes: |
+  Lower volume than HN, often higher signal for tools-focused readers.

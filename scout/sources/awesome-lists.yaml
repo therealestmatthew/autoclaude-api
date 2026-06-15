@@ -1,0 +1,22 @@
+name: awesome-lists
+type: awesome-list
+enabled: true
+poll_interval_minutes: 1440      # daily is plenty; these change slowly
+
+# Curated lists we re-scan periodically. Each entry is parsed as a markdown
+# document, links extracted, and each link queued as a candidate.
+#
+# Seed list — extend as we find more. The agent should diff against the prior
+# scan and only queue NEW links.
+lists:
+  - name: awesome-claude-code
+    url: https://github.com/hesreallyhim/awesome-claude-code/raw/main/README.md
+  - name: anthropic-cookbook
+    url: https://github.com/anthropics/anthropic-cookbook/raw/main/README.md
+  - name: anthropic-quickstarts
+    url: https://github.com/anthropics/anthropic-quickstarts/raw/main/README.md
+
+notes: |
+  Highest signal-to-noise source. Run this even before HN/Reddit are wired up.
+  When extracting links: each link becomes a candidate; if it's a github.com URL,
+  the repo extractor (Phase 4) takes it from there.

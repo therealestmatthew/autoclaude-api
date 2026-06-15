@@ -1,0 +1,26 @@
+name: x-handles
+type: x
+enabled: false                 # off until API access is decided in Phase 5
+poll_interval_minutes: 240
+
+# Accounts whose output we want surfaced. The extractor will pull recent posts
+# and queue any that mention catalog-relevant terms or link to github.com.
+handles:
+  - AnthropicAI
+  - alexalbert__
+  - simonw
+  - swyx
+
+match:
+  any_of:
+    - claude code
+    - claude-code
+    - mcp
+    - github.com/
+
+notes: |
+  X API is paid as of 2026. Decision pending in Phase 5:
+    (a) pay for API access
+    (b) use a third-party aggregator
+    (c) defer indefinitely and rely on HN/Reddit echoes
+  Until then, this source stays disabled. Keep the config so the intent is recorded.

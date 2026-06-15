@@ -1,0 +1,23 @@
+name: hackernews
+type: hackernews
+enabled: true
+poll_interval_minutes: 60
+
+# HN Algolia search endpoint; the extractor will paginate.
+endpoint: https://hn.algolia.com/api/v1/search_by_date
+
+match:
+  any_of:
+    - claude code
+    - claude-code
+    - anthropic
+    - claude agent sdk
+    - claude skills
+    - claude plugin
+    - mcp server
+    - model context protocol
+  min_points: 10           # ignore submissions below this threshold to cut noise
+
+notes: |
+  HN signal-to-noise is good for new releases and discussions, weaker for niche
+  tooling. Pair with Lobste.rs and awesome-lists for coverage.

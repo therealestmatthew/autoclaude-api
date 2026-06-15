@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local secrets and runtime state
+.env
+.env.*
+!.env.example
+*.local
+
+# Scout runtime state — cursors and queue items may contain raw scraped data
+# we don't want in history until reviewed. Track structure (READMEs) but ignore
+# per-run output.
+/scout/state/*.json
+/scout/state/*.yaml
+!/scout/state/README.md
+/scout/queue/*.md
+!/scout/queue/README.md
+!/scout/queue/_template.md
+
+# Command center runtime logs
+/command-center/threads/*.jsonl
+/command-center/threads/*.log
+!/command-center/threads/README.md
+/command-center/token-burn/*.csv
+/command-center/token-burn/*.jsonl
+!/command-center/token-burn/README.md
