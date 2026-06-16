@@ -3,7 +3,7 @@ name: phase-7-observability-prompt
 title: "Session prompt — Phase 7 (command-center observability)"
 kind: session-prompt
 phase: 7
-status: active
+status: done
 related: [phase-7-observability]
 created_at: 2026-06-15
 updated_at: 2026-06-15

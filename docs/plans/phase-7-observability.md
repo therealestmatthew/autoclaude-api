@@ -2,10 +2,10 @@
 name: phase-7-observability
 title: "Phase 7 — Command-center observability"
 phase: 7
-status: draft
+status: done
 created_at: 2026-06-15
 updated_at: 2026-06-15
-completed_at:
+completed_at: 2026-06-15
 supersedes: []
 superseded_by:
 locked_decisions:
@@ -13,6 +13,13 @@ locked_decisions:
   - "Thread logs are append-only JSONL at /command-center/threads/<date>.jsonl. Already in use by scout / scout-dedup / scout-extract-repo. Set in Phase 2."
   - "Operator-pull, not push. Phase 7 ships CLI commands an operator runs; no Slack / email / pager integration. Set here (deferred to later)."
   - "Token-burn schema lands NOW even though no LLM-driven agent emits tokens yet — the plumbing exists so reviewer/curator agents (Phase 8+) just emit and the rollup picks them up. Set here."
+  - "Reports directory is /command-center/token-burn/reports/ in v1. Renaming the directory is a separate concern; landing reports there is the substance. (Open Q1 resolved.)"
+  - "`scout report` with no args prints today's rollup. `--week` is the explicit 7-day window. (Open Q2 resolved.)"
+  - "`--write` is write-only; never auto-commits. Operator inspects and commits by hand. (Open Q3 resolved.)"
+  - "Liveness throttle: once per URL per day (`--since today-1` in the runner) AND a 50-URL cap per `scout run` tick. Operator can override with `scout check-urls --all`. (Open Q4 resolved.)"
+  - "`scout doctor --fix` ONLY normalizes slug↔filename mismatches. Orphan children / broken supersedes surface to the reviewer; never auto-resolves. (Open Q5 resolved.)"
+  - "Liveness idempotency: same status on the same day is a no-op on the streak counters; only `last_check` moves. New day OR new status applies streak math. Pinned in `tests/unit/test_liveness_check.py`."
+  - "Dedup engine stays network-free. The URL-liveness checker is a separate command that POPULATES the state pass 4 reads. The runner runs liveness BEFORE dedup in the same tick so pass 4 sees fresh data."
 ---
 
 # Phase 7 — Command-center observability

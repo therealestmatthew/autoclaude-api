@@ -118,8 +118,12 @@ def test_full_loop_writes_queue_state_and_thread_log(
     assert "alice-new-2" in queue_text
     assert "alice-existing" not in queue_text
 
-    # Assert — state
-    state_files = list(scout_world["state"].glob("*.json"))
+    # Assert — state (filter out url-liveness.json, written by the Phase 7
+    # liveness tail step, which has its own integration test)
+    state_files = [
+        p for p in scout_world["state"].glob("*.json")
+        if p.name != "url-liveness.json"
+    ]
     assert len(state_files) == 1
     assert state_files[0].name == "awesome-lists.json"
     state = json.loads(state_files[0].read_text())

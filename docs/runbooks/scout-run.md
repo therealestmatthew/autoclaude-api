@@ -144,6 +144,76 @@ will not re-propose it.
 
 See `/conventions/merge-rules.md` for the full automation contract.
 
+### 1b'''. Check URL liveness on its own
+
+`scout check-urls` HEADs every catalog `source.url` and updates
+`/scout/state/url-liveness.json`. Pass 4 of the dedup engine reads that
+file to decide what to auto-archive — the engine itself is network-free.
+The same liveness pass runs as a throttled tail step of `scout run` (skip
+with `--no-check-urls`); use this standalone form when you want to
+re-check immediately or audit a specific URL's history.
+
+```sh
+uv run scout check-urls -v               # up to 50 URLs (default cap)
+uv run scout check-urls --all -v         # no cap
+uv run scout check-urls --since 2026-06-15   # skip URLs already checked on/after this date
+```
+
+**Streak rules** (pinned in `tests/unit/test_liveness_check.py`):
+
+- 4xx response increments `404_count`; first one in a streak sets `first_404`.
+- 2xx / 3xx resets `404_count` to 0 and clears `first_404`.
+- 5xx, network errors, and `UnsafeURLError` are recorded as `last_error`
+  but **do not** move the streak — transient failures should not poison
+  the catalog.
+- A streak of ≥3 with `first_404` ≥30 days old fires pass 4 archive.
+
+### 1b''''. Weekly / daily rollup report
+
+`scout report` aggregates the thread log into a markdown summary. With
+`--write`, it lands in `/command-center/token-burn/reports/` so it can be
+committed.
+
+```sh
+uv run scout report                      # today
+uv run scout report --week               # last 7 days (Mon-Sun by convention)
+uv run scout report --since 2026-06-01   # custom window, ending today
+uv run scout report --week --write       # also write to reports/
+```
+
+Reports include: headline counts, per-agent run/ok/partial breakdown,
+per-source queued counts, token-burn cells (currently empty — no
+LLM-driven agents emit tokens until Phase 8+ ships the reviewer), and a
+"things to triage" list pulled from warning messages.
+
+The renderer is deterministic: re-running `--write` over the same window
+produces a byte-identical file (so you can re-run it without dirtying
+git). `--write` never auto-commits — that's the operator's call.
+
+### 1b'''''. Catalog integrity checks
+
+`scout doctor` runs static checks over `/catalog/` and `/scout/queue/`:
+
+```sh
+uv run scout doctor                       # human-readable summary
+uv run scout doctor --json                # machine-readable
+uv run scout doctor --fix                 # ONLY auto-fixes slug↔filename mismatches
+uv run scout doctor --strict              # exit 1 if any finding
+```
+
+Findings reported:
+
+| Kind                       | What it means                                                |
+| -------------------------- | ------------------------------------------------------------ |
+| `orphan-child`             | `relations.parent: <slug>` whose parent isn't catalog/queue. |
+| `broken-supersedes`        | `relations.supersedes: [<slug>]` for an unknown slug.        |
+| `slug-mismatch`            | `name:` differs from filename stem. `--fix` renames the file.|
+| `missing-required-field`   | Required schema field is empty / missing.                    |
+| `stale-reviewed`           | `status: reviewed`, no edits in >30 days. Informational.     |
+
+Orphans and broken supersedes never auto-resolve — they surface to a
+reviewer. `--fix` only renames files; never deletes or rewrites content.
+
 ### 1c. Force a "from-scratch" run
 
 Cursors live in `/scout/state/<source>.json`. Delete the file for the

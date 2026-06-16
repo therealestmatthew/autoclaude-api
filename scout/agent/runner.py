@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -27,6 +27,8 @@ from ..extractors.lobsters import LobstersExtractor
 from ..extractors.reddit import RedditExtractor
 from ..extractors.repo import RepoExtractor
 from ..extractors.x import XExtractor
+from ..liveness import check_urls_once
+from ..liveness.check import LIVENESS_STATE_FILENAME
 from .types import (
     AwesomeListSource,
     Candidate,
@@ -70,6 +72,7 @@ def run_once(
     verbose: bool = False,
     *,
     run_dedup: bool = True,
+    run_liveness: bool = True,
 ) -> dict:
     """Run a single tick across all enabled sources (or just one).
 
@@ -154,6 +157,27 @@ def run_once(
     repo_stats = _process_repo_queue(run_id=run_id, verbose=verbose)
     stats["repo_extraction"] = repo_stats
     stats["candidates_queued"] += repo_stats["children_queued"]
+
+    # Liveness tail step: HEAD a capped number of catalog URLs so pass 4 of
+    # the dedup engine has fresh 404 history to act on. Network errors are
+    # absorbed by the checker; nothing here halts. Skipped with
+    # --no-check-urls. Ordering matters: liveness must run BEFORE dedup so
+    # pass 4 reads the updated state in the same tick.
+    if run_liveness:
+        today = date.today()
+        liveness_stats = check_urls_once(
+            CATALOG_DIR,
+            STATE_DIR / LIVENESS_STATE_FILENAME,
+            since=today - timedelta(days=1),
+            verbose=verbose,
+        )
+        stats["liveness"] = liveness_stats
+        if verbose:
+            print(
+                f"[scout] liveness: checked={liveness_stats['checked']} "
+                f"ok={liveness_stats['ok']} 4xx={liveness_stats['error_4xx']} "
+                f"5xx={liveness_stats['error_5xx']}"
+            )
 
     # Final pass: collapse identity-duplicates and surface merge proposals
     # before a human shows up to review the queue. Skipped with --no-dedup.
