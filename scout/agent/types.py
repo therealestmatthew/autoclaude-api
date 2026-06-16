@@ -132,3 +132,13 @@ class LobstersSource(_FilteredSource):
 class RedditSource(_FilteredSource):
     type: Literal["reddit"]
     subreddits: list[str]
+
+
+class XSource(_FilteredSource):
+    """X / Twitter source config. The extractor itself is a deferral stub
+    (Phase 5 locked decision); this model exists so the registry round-trips
+    cleanly and `scout/sources/x-handles.yaml` validates.
+    """
+
+    type: Literal["x"]
+    handles: list[str]

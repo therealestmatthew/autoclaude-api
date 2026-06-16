@@ -26,6 +26,7 @@ from ..extractors.hackernews import HackerNewsExtractor
 from ..extractors.lobsters import LobstersExtractor
 from ..extractors.reddit import RedditExtractor
 from ..extractors.repo import RepoExtractor
+from ..extractors.x import XExtractor
 from .types import (
     AwesomeListSource,
     Candidate,
@@ -34,6 +35,7 @@ from .types import (
     RedditSource,
     RepoExtractRequest,
     SourceState,
+    XSource,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -50,6 +52,7 @@ EXTRACTOR_REGISTRY: dict[str, object] = {
     "hackernews": HackerNewsExtractor(),
     "lobsters": LobstersExtractor(),
     "reddit": RedditExtractor(),
+    "x": XExtractor(),       # Phase 5 stub; raises if invoked while source enabled
 }
 
 # How to parse a source config of a given type into its pydantic model.
@@ -58,6 +61,7 @@ SOURCE_MODELS: dict[str, type] = {
     "hackernews": HackerNewsSource,
     "lobsters": LobstersSource,
     "reddit": RedditSource,
+    "x": XSource,
 }
 
 
