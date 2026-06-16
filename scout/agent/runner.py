@@ -20,6 +20,7 @@ from pathlib import Path
 import yaml
 
 from .._util import canonical_github_url, parse_frontmatter, slugify
+from ..dedup import run_passes as run_dedup_passes
 from ..extractors.awesome_list import AwesomeListExtractor
 from ..extractors.hackernews import HackerNewsExtractor
 from ..extractors.lobsters import LobstersExtractor
@@ -60,7 +61,12 @@ SOURCE_MODELS: dict[str, type] = {
 }
 
 
-def run_once(source_name: str | None = None, verbose: bool = False) -> dict:
+def run_once(
+    source_name: str | None = None,
+    verbose: bool = False,
+    *,
+    run_dedup: bool = True,
+) -> dict:
     """Run a single tick across all enabled sources (or just one).
 
     Returns a stats dict suitable for the thread log.
@@ -145,9 +151,67 @@ def run_once(source_name: str | None = None, verbose: bool = False) -> dict:
     stats["repo_extraction"] = repo_stats
     stats["candidates_queued"] += repo_stats["children_queued"]
 
+    # Final pass: collapse identity-duplicates and surface merge proposals
+    # before a human shows up to review the queue. Skipped with --no-dedup.
+    if run_dedup:
+        dedup_record = dedup_once(verbose=verbose, write_thread_log=False)
+        stats["dedup"] = dedup_record["stats"]
+        if verbose:
+            print(f"[scout] dedup: {dedup_record['summary']}")
+
     stats["ended_at"] = datetime.now(UTC).isoformat()
     _write_thread_log(stats)
     return stats
+
+
+def dedup_once(
+    *,
+    only_pass: str | None = None,
+    dry_run: bool = False,
+    verbose: bool = False,
+    write_thread_log: bool = True,
+) -> dict:
+    """One-shot dedup pass; mirrors the shape of run_once / extract_repo_once.
+
+    `write_thread_log=False` is used when the dedup pass runs as the tail of
+    `run_once` (the surrounding tick already logs a single record).
+    """
+    started_at = datetime.now(UTC).isoformat()
+    run_id = (
+        "dedup-"
+        + date.today().isoformat()
+        + "-"
+        + datetime.now(UTC).strftime("%H%M%S")
+    )
+
+    report = run_dedup_passes(
+        QUEUE_DIR, CATALOG_DIR, STATE_DIR,
+        dry_run=dry_run,
+        only_pass=only_pass,
+    )
+
+    record = {
+        "run_id": run_id,
+        "thread_id": run_id,
+        "started_at": started_at,
+        "ended_at": datetime.now(UTC).isoformat(),
+        "dry_run": dry_run,
+        "only_pass": only_pass,
+        "summary": report.summary(),
+        "errors": report.errors,
+        "stats": {
+            "pass1_identity_collapse": report.pass1_identity_collapse,
+            "pass2_url_canonicalize": report.pass2_url_canonicalize,
+            "pass3_merge_proposals": report.pass3_merge_proposals,
+            "pass4_auto_archived": report.pass4_auto_archived,
+            "rejected_proposals_carried": report.rejected_proposals_carried,
+        },
+    }
+    if write_thread_log and not dry_run:
+        _write_dedup_thread_log(record)
+    if verbose:
+        print(f"[scout] dedup {run_id}: {report.summary()}")
+    return record
 
 
 def extract_repo_once(
@@ -366,6 +430,24 @@ def _process_repo_queue(*, run_id: str, verbose: bool) -> dict:
         "children_queued": children_queued,
         "warnings": warnings,
     }
+
+
+def _write_dedup_thread_log(record: dict) -> None:
+    THREADS_DIR.mkdir(parents=True, exist_ok=True)
+    today = date.today().isoformat()
+    path = THREADS_DIR / f"{today}.jsonl"
+    outcome = "ok" if not record["errors"] else "partial"
+    line = {
+        "thread_id": record["thread_id"],
+        "agent": "scout-dedup",
+        "started_at": record["started_at"],
+        "ended_at": record["ended_at"],
+        "outcome": outcome,
+        "summary": record["summary"],
+        "stats": record["stats"],
+    }
+    with path.open("a") as f:
+        f.write(json.dumps(line) + "\n")
 
 
 def _write_extract_thread_log(record: dict) -> None:

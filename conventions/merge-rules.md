@@ -61,3 +61,55 @@ These are guidance, not rules. When in doubt, propose merge and let the human de
 - Suggesting tags from content.
 
 Until that automation exists, all of these are manual.
+
+## Automation (Phase 6 — `scout dedup`)
+
+Phase 6 implements part of the decision tree above as `scout/dedup/`. The
+engine is run automatically at the tail of `scout run` (skipped with
+`--no-dedup`) and can be invoked on its own:
+
+```sh
+uv run scout dedup                    # all four passes
+uv run scout dedup --pass identity    # one pass at a time (debug)
+uv run scout dedup --dry-run          # report what would change; touch nothing
+```
+
+### What the engine does
+
+| Pass | Trigger                                                       | Action                                                                                  |
+| ---- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 1    | Two items share exact `source.url` or `fingerprint`.          | Collapse to the catalog member (or earliest queue member; cross-kind prefers `repo`). Discard losers. |
+| 2    | Two items share `canonical_github_url` (a subpath of a repo). | Same collapse logic as pass 1. Parent-child URL aliasing is detected and excluded.      |
+| 3    | Two items in the same `(kind, primary_author)` bucket have title-token Jaccard ≥ 0.6. | Tag both with `mergeset_id: ms-<sha8>`; append a `## Merge proposal (auto)` body section recommending a target.  |
+| 4    | Catalog asset has ≥3 consecutive 404s in `state/url-liveness.json` (first 404 >30d ago) **or** a non-empty `relations.supersedes` and `status: reviewed` for >30d. | Set `status: archived`, `archived_reason`, `archived_at`, bump `updated_at`. |
+
+Cross-repo children with the same `child-name` (`<repo-a>--code-reviewer`
+vs `<repo-b>--code-reviewer`) are NEVER collapsed — the parent scoping
+already differentiates them.
+
+### What the engine does NOT do
+
+- **Promote anything to `/catalog/`.** Promotion is human-only forever.
+- **Edit any `/catalog/` field other than `status`, `archived_reason`,
+  `archived_at`, `updated_at`.** Even an incidental annotation (e.g.,
+  `mergeset_id`) is reverted on write.
+- **Apply merge proposals.** Pass 3 surfaces a recommendation; the human
+  executes the merge (or rejects it).
+- **Auto-merge sibling-child repos.** See above.
+
+### Rejecting a merge proposal
+
+When you don't agree with a `## Merge proposal (auto)` block, change the
+header to `## Merge proposal (auto, rejected)`. On the next run, the engine
+records the rejection in `/scout/state/merge-decisions.json` and will not
+re-propose that mergeset.
+
+The body section is for human readability; the JSONL ledger is the engine's
+source of truth. If the two disagree the ledger wins.
+
+### Idempotency contract
+
+Running `scout dedup` twice in a row produces identical disk state on the
+second run. This is enforced by `tests/unit/test_dedup_oscillation.py` and
+`tests/integration/test_run_once_with_dedup.py`; a regression there blocks
+merge.

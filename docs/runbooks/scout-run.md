@@ -109,6 +109,41 @@ the queue for unreviewed github-typed repo entries and runs the extractor
 on each. To skip a repo permanently, delete the parent queue file before
 the next run.
 
+### 1b''. Run the dedup engine on demand
+
+`scout dedup` runs four deterministic passes over `/scout/queue/` and
+`/catalog/` and surfaces merge recommendations without touching catalog
+content beyond the four allowlisted status fields. The same pass also runs
+at the tail of every `scout run` unless `--no-dedup` is passed.
+
+```sh
+uv run scout dedup                    # all four passes; writes/deletes apply
+uv run scout dedup --dry-run -v       # report what would change; touch nothing
+uv run scout dedup --pass identity    # one pass at a time (debug)
+uv run scout dedup --pass proposals
+```
+
+**Expected output (shape):**
+
+```
+dedup-<YYYY-MM-DD>-<HHMMSS>: identity=<X> url=<Y> proposals=<Z> auto_archived=<A>
+```
+
+After it runs:
+
+- Some queue files may be **gone** (identity / URL-canonical collapse).
+- Some queue files have a new `mergeset_id: ms-<sha8>` frontmatter field
+  and a `## Merge proposal (auto)` body section recommending a target.
+- A few catalog files may flip to `status: archived` with an
+  `archived_reason` (`source-url-404` or `superseded`) and an `archived_at`.
+
+To reject a proposal, change its body header from
+`## Merge proposal (auto)` to `## Merge proposal (auto, rejected)`. The
+engine records the rejection in `/scout/state/merge-decisions.json` and
+will not re-propose it.
+
+See `/conventions/merge-rules.md` for the full automation contract.
+
 ### 1c. Force a "from-scratch" run
 
 Cursors live in `/scout/state/<source>.json`. Delete the file for the
@@ -138,7 +173,24 @@ ls /scout/queue/ | wc -l                          # how many
 ls -t /scout/queue/ | head -20                    # most recent
 ```
 
-### 2b. Open and decide
+### 2b. Skim the dedup output first
+
+The dedup pass ran at the end of the most recent `scout run`. Before opening
+queue files one by one, look at what it already grouped:
+
+```sh
+# How many active merge proposals
+grep -l "scout-dedup-proposal-start" /scout/queue/*.md | wc -l
+
+# How many catalog items were auto-archived in the last day
+grep -l "archived_at: $(date -I)" /catalog/*.md
+```
+
+Files with `mergeset_id:` frontmatter belong to an active group; reviewing
+one member often resolves the rest. Files without a mergeset are
+genuinely-distinct candidates.
+
+### 2c. Open and decide
 
 Open one queue file at a time. For each:
 
@@ -154,7 +206,7 @@ Open one queue file at a time. For each:
    - **Merge** → update the existing `/catalog/<slug>.md` (add an alternate
      URL, bump tags, etc.), then `rm` the queue file.
 
-### 2c. Inspect what the candidate looks like
+### 2d. Inspect what the candidate looks like
 
 ```sh
 cat /scout/queue/<file>.md
