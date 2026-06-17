@@ -117,9 +117,13 @@ uv run ruff check scout/ web/ tests/ --fix # autofix safe issues
 
 uv run autoclaude-api                     # FastAPI backend for the web UI on :8000
 ( cd web/apps/web && npm run dev )        # Next.js frontend on :3000 (requires `npm install` first)
+
+uv run autoclaude-index sync              # populate / refresh the persistent index (SQLite default at web/.data/index.sqlite)
+uv run autoclaude-index status            # show current sync state
+uv run autoclaude-index upgrade           # alembic upgrade head; rarely needed (API auto-migrates on boot)
 ```
 
-`scout` and `autoclaude-api` are exposed as console scripts via `pyproject.toml`. The full testing protocol lives in `/conventions/testing.md`; web app rules live in `/conventions/web-app.md`; the web runbook lives at `/command-center/runbooks/web-app.md`.
+`scout`, `autoclaude-api`, and `autoclaude-index` are exposed as console scripts via `pyproject.toml`. The full testing protocol lives in `/conventions/testing.md`; web app rules live in `/conventions/web-app.md`; the web runbook lives at `/command-center/runbooks/web-app.md`. The persistent-index design lives at `/docs/plans/phase-8-2-persistent-index.md`.
 
 ### Conventions
 

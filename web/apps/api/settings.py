@@ -1,8 +1,9 @@
 """Environment-driven configuration for the FastAPI app.
 
 Single source of truth for "where is the repo", "what port", "what origins
-should CORS accept". Read from env vars with sensible defaults so the runbook
-gives a clean `uv run autoclaude-api` story without a config file.
+should CORS accept", and (8.2) the persistent index DSN + reconciler cadence.
+Read from env vars with sensible defaults so the runbook gives a clean
+`uv run autoclaude-api` story without a config file.
 """
 
 from __future__ import annotations
@@ -32,6 +33,10 @@ class Settings:
     port: int
     cors_origins: tuple[str, ...]
     log_level: str
+    # 8.2 — persistent index knobs.
+    index_dsn: str | None
+    reconcile_interval: float
+    auto_migrate: bool
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -46,12 +51,30 @@ class Settings:
         )
         cors_origins = tuple(o.strip() for o in origins_env.split(",") if o.strip())
         log_level = os.environ.get("AUTOCLAUDE_API_LOG_LEVEL", "info")
+
+        dsn = os.environ.get("AUTOCLAUDE_INDEX_DSN", "").strip() or None
+        reconcile_interval = float(
+            os.environ.get("AUTOCLAUDE_INDEX_RECONCILE_INTERVAL", "60")
+        )
+        # Default ON: dev story is "uv run autoclaude-api just works on a
+        # fresh checkout." Production / CI can set it to 0 to keep schema
+        # migrations as an explicit deploy step.
+        auto_migrate = os.environ.get("AUTOCLAUDE_INDEX_AUTO_MIGRATE", "1").strip() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
         return cls(
             repo_root=repo_root,
             host=host,
             port=port,
             cors_origins=cors_origins,
             log_level=log_level,
+            index_dsn=dsn,
+            reconcile_interval=reconcile_interval,
+            auto_migrate=auto_migrate,
         )
 
 

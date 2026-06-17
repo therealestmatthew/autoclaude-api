@@ -50,6 +50,7 @@ Routers (under `web/apps/api/routers/`) are thin glue between the cache and the 
 Routers must not:
 
 - Open files directly. The `CachedIndex` handles all repo I/O.
+- Open database sessions directly. As of 8.2 the cache is DB-backed; the materialised `IndexSnapshot` is still the only shape routers see. If a router thinks it needs a SQLAlchemy session, the right move is to extend `CachedIndex` or add a helper under `web/apps/api/db/query.py`.
 - Call out to external services. v1 is offline.
 - Mutate request state across requests. Each request is a pure function of the snapshot.
 

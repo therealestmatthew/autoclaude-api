@@ -5,8 +5,8 @@ kind: runbook
 status: active
 when_to_run: "Any time you need to run, debug, or refresh the /web/ surface."
 last_used:
-last_verified: 2026-06-16
-updated_at: 2026-06-16
+last_verified: 2026-06-17
+updated_at: 2026-06-17
 ---
 
 # Runbook — Web command center
@@ -54,11 +54,23 @@ curl -s http://localhost:8000/stats | jq '.stats.by_bucket'
 
 ## Refresh the index
 
-The backend cache invalidates automatically when the relevant directory mtimes change. If you've made many file edits and want to be sure:
+The persistent index lives at `web/.data/index.sqlite` and is rebuildable from the repo at any time. The API drives an initial sync on startup and runs a background reconciler every 60 seconds, so most edits surface within a minute. Force a sync explicitly when you need it immediately:
 
 ```sh
 curl -s -X POST http://localhost:8000/sync | jq
+# or, without the API running:
+uv run autoclaude-index sync
 ```
+
+If the schema is wrong (or doesn't exist yet), upgrade it:
+
+```sh
+uv run autoclaude-index upgrade        # alembic upgrade head
+uv run autoclaude-index status         # show meta + record count
+uv run autoclaude-index reset --yes    # drop + re-migrate + re-sync from scratch
+```
+
+By default the API runs `alembic upgrade head` automatically on boot, so the only time you'd run `upgrade` by hand is in a deploy script that prefers explicit migrations. Set `AUTOCLAUDE_INDEX_AUTO_MIGRATE=0` to disable the on-boot upgrade.
 
 ## Stop
 
@@ -75,6 +87,9 @@ Backend env vars (read once at startup):
 | `AUTOCLAUDE_API_PORT`        | `8000`                                               | bind port                                 |
 | `AUTOCLAUDE_API_CORS_ORIGINS`| `http://localhost:3000,http://127.0.0.1:3000`        | comma-separated allowed origins           |
 | `AUTOCLAUDE_API_LOG_LEVEL`   | `info`                                               | uvicorn log level                         |
+| `AUTOCLAUDE_INDEX_DSN`       | `sqlite:///web/.data/index.sqlite` (resolved against `AUTOCLAUDE_REPO_ROOT`) | SQLAlchemy connection string. Override for Postgres in 8.5. |
+| `AUTOCLAUDE_INDEX_RECONCILE_INTERVAL` | `60`                                        | seconds between background syncs; `0` disables the loop (useful in tests). |
+| `AUTOCLAUDE_INDEX_AUTO_MIGRATE`| `1`                                                | run `alembic upgrade head` on API boot. Set `0` in production / CI to make migrations an explicit deploy step. |
 
 Frontend env vars (`web/apps/web/.env.local`):
 
@@ -111,6 +126,20 @@ AUTOCLAUDE_API_PORT=8001 uv run autoclaude-api
 
 The web deps aren't installed. Run `uv sync --group web` (or `uv sync` if `dev` includes them, which it does for the test suite).
 
+### `no such table: asset`
+
+The DB schema isn't initialised. The API auto-migrates on boot by default; this error usually means `AUTOCLAUDE_INDEX_AUTO_MIGRATE=0` is set or the DSN points somewhere the migrations haven't been applied. Fix:
+
+```sh
+uv run autoclaude-index upgrade
+```
+
+If the DB ended up in an unrecoverable state (e.g. mid-development schema churn), wipe and start fresh:
+
+```sh
+uv run autoclaude-index reset --yes
+```
+
 ### Catalog asset shows up with an "issues" badge
 
 The indexer flagged a parse or required-field problem. The badge text matches one of:
@@ -141,11 +170,14 @@ uv run pytest tests/integration/web -q
 | ----------------------------- | --------------------------------------- |
 | Architectural rules           | `/conventions/web-app.md`               |
 | Phase plan + roadmap          | `/docs/plans/phase-8-web-command-center.md` |
+| Persistent-index plan         | `/docs/plans/phase-8-2-persistent-index.md` |
 | Backend code                  | `/web/apps/api/`                        |
+| Persistent-index code         | `/web/apps/api/db/` + `/web/migrations/` |
 | Frontend code                 | `/web/apps/web/`                        |
-| Entry-point script            | `/tools/web.py` → `uv run autoclaude-api` |
+| Entry-point scripts           | `/tools/web.py` → `uv run autoclaude-api`, `/tools/index.py` → `uv run autoclaude-index` |
 | Tests                         | `/tests/unit/web/`, `/tests/integration/web/` |
 | Test fixtures                 | `/tests/fixtures/web/sample_repo/`      |
+| SQLite (gitignored)           | `/web/.data/index.sqlite`               |
 
 ## Last-verified policy
 
