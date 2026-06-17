@@ -38,6 +38,9 @@ A command-and-control center for an agentic consulting & software-delivery pract
   /threads/          log of agentic threads
   /token-burn/       logs + reports
   /runbooks/         how to operate the system
+/web/                Phase 8 web command center (operator UI)
+  /apps/api/         FastAPI backend; part of the autoclaude Python package
+  /apps/web/         Next.js 15 + Tailwind frontend; standalone npm project
 ```
 
 ## Core conventions (read `/conventions/` for full detail)
@@ -57,6 +60,7 @@ A command-and-control center for an agentic consulting & software-delivery pract
 | An asset we've adopted into our working toolkit         | `/claude/<area>/` **and** keep the catalog entry with `status: adopted` |
 | A consulting methodology / template / engagement        | `/consulting/<area>/`            |
 | An operator runbook for the system itself               | `/command-center/runbooks/`      |
+| Browser UI changes (catalog browser, dashboard, …)      | `/web/apps/api/` + `/web/apps/web/` — see `/conventions/web-app.md` |
 
 The catalog is the long-term memory. `/claude/` is what we actively use. An asset can live in both — catalog tracks origin and judgment, `/claude/` is the working copy.
 
@@ -108,12 +112,14 @@ uv run pytest tests/integration           # integration only
 uv run pytest -m "not integration"        # marker-based filter (equivalent to unit-only)
 uv run pytest -k slugify                  # filter by name substring
 
-uv run ruff check scout/ tests/           # lint
-uv run ruff check scout/ tests/ --fix     # autofix safe issues
+uv run ruff check scout/ web/ tests/      # lint
+uv run ruff check scout/ web/ tests/ --fix # autofix safe issues
+
+uv run autoclaude-api                     # FastAPI backend for the web UI on :8000
+( cd web/apps/web && npm run dev )        # Next.js frontend on :3000 (requires `npm install` first)
 ```
 
-`scout` is exposed as a console script via `pyproject.toml`. The full testing
-protocol lives in `/conventions/testing.md`.
+`scout` and `autoclaude-api` are exposed as console scripts via `pyproject.toml`. The full testing protocol lives in `/conventions/testing.md`; web app rules live in `/conventions/web-app.md`; the web runbook lives at `/command-center/runbooks/web-app.md`.
 
 ### Conventions
 
@@ -162,8 +168,9 @@ When adding a new test, follow `/conventions/testing.md` for which directory it 
 - **Phase 4 (done):** repo extractor (GitHub URL → child assets), running each clone in a per-clone Docker container per `/conventions/security.md`. Podman runtime is reserved (stub raises `NotImplementedError`).
 - **Phase 5:** X / Twitter ingestion.
 - **Phase 6:** automated merge/dedup decisioning.
-- **Phase 7:** command-center observability (token burn, threads).
-- **Phase 8+:** consulting buildout.
+- **Phase 7 (done):** command-center observability (token burn, threads).
+- **Phase 8 (active):** web command center — operator UI over the catalog, queue, threads, engagements. See `/docs/plans/phase-8-web-command-center.md`.
+- **Phase 9+:** consulting buildout.
 
 ## Planning lineage
 

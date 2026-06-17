@@ -51,3 +51,11 @@ htmlcov/
 /command-center/token-burn/*.csv
 /command-center/token-burn/*.jsonl
 !/command-center/token-burn/README.md
+
+# Phase 8 web app — frontend build artefacts and local config.
+/web/apps/web/node_modules/
+/web/apps/web/.next/
+/web/apps/web/out/
+/web/apps/web/.env.local
+/web/apps/web/.env.*.local
+/web/apps/web/next-env.d.ts.bak

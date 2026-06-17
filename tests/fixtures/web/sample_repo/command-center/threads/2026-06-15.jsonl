@@ -1,0 +1,4 @@
+{"thread_id": "scout-2026-06-15-1", "agent": "scout", "started_at": "2026-06-15T10:00:00+00:00", "ended_at": "2026-06-15T10:00:05+00:00", "outcome": "ok", "summary": "queued=2 errors=0"}
+{"thread_id": "scout-2026-06-15-2", "agent": "scout-dedup", "started_at": "2026-06-15T11:00:00+00:00", "ended_at": "2026-06-15T11:00:01+00:00", "outcome": "ok", "summary": "collapsed=1"}
+not-a-valid-json-line
+{"thread_id": "scout-2026-06-15-3", "agent": "scout-extract-repo", "started_at": "2026-06-15T12:00:00+00:00", "ended_at": "2026-06-15T12:00:30+00:00", "outcome": "partial", "summary": "1 clone failed"}

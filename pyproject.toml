@@ -17,14 +17,27 @@ dependencies = [
 [project.scripts]
 scout = "scout.agent.cli:main"
 manifest = "tools.manifest:main"
+autoclaude-api = "tools.web:main"
 
 # PEP 735 dependency groups. `uv sync` installs the runtime deps + the `dev`
 # group by default; `uv sync --no-dev` skips the group for a slim runtime
 # install. Add more groups (`docs`, `bench`, ...) as needs appear.
+#
+# `web` holds the FastAPI/uvicorn deps for the Phase 8 web command center.
+# `uv sync --group web` brings them in; headless scout users skip them.
 [dependency-groups]
 dev = [
   "pytest>=8.0",
   "ruff>=0.6",
+  # Web deps included in dev so the test suite (which exercises the FastAPI
+  # routers) installs them by default.
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "httpx>=0.27",   # FastAPI TestClient transitively depends on this; already in runtime.
+]
+web = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
 ]
 
 [build-system]
@@ -32,7 +45,16 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["scout", "scout.agent", "scout.extractors", "tools"]
+packages = [
+  "scout",
+  "scout.agent",
+  "scout.extractors",
+  "tools",
+  "web",
+  "web.apps",
+  "web.apps.api",
+  "web.apps.api.routers",
+]
 
 [tool.uv]
 # Default groups installed by `uv sync` (in addition to runtime deps).
@@ -41,10 +63,18 @@ default-groups = ["dev"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+  # Don't lint the web frontend's node_modules even when present locally.
+  "web/apps/web/node_modules",
+  "web/apps/web/.next",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
-ignore = []
+# B008: `Depends(...)` / `Query(...)` in argument defaults is the canonical
+# FastAPI route signature. Suppressing here is preferable to littering route
+# handlers with `# noqa: B008`.
+ignore = ["B008"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
