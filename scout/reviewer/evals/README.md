@@ -61,15 +61,24 @@ These are corrections to fold back into
 `docs/plans/phase-9-0-reviewer-agent.md`. The plan reads them as the
 delta between v0 and what 9.0 should actually ship.
 
-### F1. Phase 6 dedup is a prerequisite, not just context
+### F1. ~~Phase 6 dedup is a prerequisite~~ (RETRACTED 2026-06-17)
 
-The 363-item queue has zero candidates with a `mergeset_id`. Phase 6
-dedup has not run on this queue. The reviewer plan currently treats
-dedup output as supplemental context; in practice, **the reviewer
-should refuse to run on a queue with un-deduped state**, or alterna-
-tively `scout review` should invoke `scout dedup` as a precondition.
-Reviewing 30+ children of `skills-for-humanity` independently is
-wasted tokens and risks inconsistent decisions across siblings.
+**Original claim:** The 363-item queue has zero `mergeset_id`, so
+Phase 6 hasn't run; the reviewer should require it.
+
+**Retracted:** A subsequent dry-run (`scout dedup --dry-run`) showed
+Phase 6 has nothing to collapse on this queue (`identity=0 url=0
+proposals=0 auto_archived=0`). The apparent "duplicates" I saw —
+governor parent/child, skills-for-humanity parent + 30+ children —
+are NOT duplicates from Phase 6's standpoint. They're `relations.
+parent` extractions from the Phase 4 repo walker, and Phase 6 § "Pass
+2" explicitly excludes parent-child URL aliasing from collapsing.
+The merge-rules and the engine are correct.
+
+**What's still true:** the reviewer needs to handle parent-child sets
+atomically (F2). But that's a `Decision.scope` concern, not a Phase 6
+precondition. The 9.0 plan's "dedup as precondition" amendment should
+be retracted; F2's scope-batching stands.
 
 ### F2. Parent-child sets are atomic decisions
 

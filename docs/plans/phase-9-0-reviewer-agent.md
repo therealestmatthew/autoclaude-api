@@ -122,11 +122,10 @@ default while we tune quality). When enabled the order is:
 scout sources → queue → dedup → liveness → reviewer → rollup
 ```
 
-**Precondition (per F1):** the reviewer refuses to start if the queue
-contains candidates without a `mergeset_id` decision from Phase 6 (the
-absence indicates dedup hasn't run on them). `scout review` runs
-`scout dedup` as a precondition pass unless `--skip-dedup-precondition`
-is set. Tests pin this.
+No additional precondition. Phase 6 already runs as the queue is built
+(via `scout run`'s tail step); the reviewer reads its output as context
+but doesn't require it. The earlier F1 amendment about a hard precondition
+is withdrawn — see the Findings section.
 
 ### 3. The prompt
 
@@ -382,22 +381,35 @@ golden set (`scout/reviewer/evals/golden.jsonl`). The act of labeling
 surfaced seven corrections to this plan. Each finding folds back into
 the design above; reread the design assuming they apply.
 
-### F1. Phase 6 dedup is a prerequisite, not just context
+### F1. ~~Phase 6 dedup is a prerequisite~~ (RETRACTED)
 
-**Observed:** The 363-item queue has zero candidates with a
-`mergeset_id`. Phase 6 has not run on this queue. The queue holds
-30+ children of `skills-for-humanity`, 5+ children of `lathe`,
-parent+child of `governor`, and 5+ near-duplicate Anthropic news
-articles — all of which Phase 6 should be collapsing first.
+**Original observation (wrong):** The 363-item queue has zero
+candidates with a `mergeset_id`, so Phase 6 hasn't run; the reviewer
+should require it.
 
-**Correction:** `scout review` refuses to run on a queue with un-
-deduped state, and the runner invokes `scout dedup` as a precondition
-unless `--skip-dedup-precondition` is passed. The runbook documents
-this. The trigger model gains a precondition step:
+**Retraction (2026-06-17):** A dry-run of `scout dedup` returned
+`identity=0 url=0 proposals=0 auto_archived=0`. The queue genuinely
+has nothing for Phase 6 to collapse. What I read as "duplicates" —
+governor parent/child, skills-for-humanity parent + ~30 children —
+are `relations.parent` extractions that Phase 6 *correctly excludes*
+from collapsing per merge-rules.md § "Parent-child URL aliasing is
+detected and excluded."
+
+The "dedup as precondition" amendment is withdrawn. The trigger
+model stays as originally written:
 
 ```
-scout sources → queue → dedup (REQUIRED before review) → liveness → reviewer → rollup
+scout sources → queue → dedup → liveness → reviewer → rollup
 ```
+
+(The news cluster — 5+ near-duplicate Axios articles about
+Anthropic D.C. politics — is also not a Phase 6 case: different URLs
+and different primary authors put them in different Pass 3 buckets.
+They survive as separate `discard` decisions, which is fine. Phase 6
+isn't a deduper of conceptually-similar news.)
+
+The deeper insight that the reviewer needs to handle parent-child
+sets atomically is preserved in F2, where it actually belongs.
 
 ### F2. Parent-child sets are atomic decisions
 
