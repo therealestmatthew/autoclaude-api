@@ -5,6 +5,9 @@ phase: 9
 status: draft
 created_at: 2026-06-17
 updated_at: 2026-06-17
+# 2026-06-17: amended in-place after v0 golden-set reconnaissance produced
+# 7 findings (F1–F7) that change the design. See "Findings from v0
+# reconnaissance" before reading the design.
 completed_at:
 supersedes: []
 superseded_by:
@@ -119,6 +122,12 @@ default while we tune quality). When enabled the order is:
 scout sources → queue → dedup → liveness → reviewer → rollup
 ```
 
+**Precondition (per F1):** the reviewer refuses to start if the queue
+contains candidates without a `mergeset_id` decision from Phase 6 (the
+absence indicates dedup hasn't run on them). `scout review` runs
+`scout dedup` as a precondition pass unless `--skip-dedup-precondition`
+is set. Tests pin this.
+
 ### 3. The prompt
 
 Built dynamically per candidate. Shape:
@@ -190,10 +199,13 @@ the decision. This is more reliable than parsing free-form JSON.
 ```python
 class Decision(BaseModel):
     action: Literal["keep", "merge", "discard"]
-    target_slug: str | None = None  # required if action == "merge"
+    scope: Literal["self", "parent-with-children"] = "self"  # F2
+    target_slug: str | None = None              # required if action == "merge"
+    suggested_slug: str | None = None           # F4 — rename target on keep
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str
     suggested_edits: dict | None = None
+    flags: dict | None = None                   # F6, F7 — author_mismatch, url_target, etc.
 
     @model_validator(mode="after")
     def _merge_needs_target(self) -> Decision:
@@ -282,17 +294,29 @@ We curate the golden set by hand: 10 clear keeps, 10 clear discards,
 10 merges (with ambiguity baked in). Each entry includes the human's
 rationale so we can compare not just action but reasoning.
 
-Scoring:
+Scoring (revised per F3 — action-match alone is gameable):
 
-- **Action match:** exact equality on `action`. Target gate: ≥ 80%.
-- **Target-slug match (merge only):** exact equality on `target_slug` if
-  the action is `merge` on both sides. Target gate: ≥ 70%.
-- **Rationale quality:** subjective; not auto-scored. Visual inspection
-  during eval review.
+| Metric                                                          | Gate    | Notes |
+| --------------------------------------------------------------- | ------- | ----- |
+| `discard` precision (we discarded → operator agrees)            | ≥ 95%   | A false-discard wastes operator time but is recoverable. |
+| `keep` precision (we kept → operator agrees)                    | ≥ 85%   | A false-keep pollutes the catalog forever. Hard floor. |
+| `keep` recall (operator-kept items we also kept)                | ≥ 70%   | False-discard of a real asset is hard to recover; this floor is conservative. |
+| Confidence calibration (Brier score on `confidence` vs correct) | ≤ 0.20  | High-confidence wrongs are worse than low-confidence wrongs. |
+| `merge` precision + target-slug match                           | ≥ 70%   | Only gated once the golden set has ≥ 10 labeled merge examples. v0 has 0. |
+| Action match (bare equality)                                    | report  | Kept as a summary; NOT a gate. |
+| Rationale quality                                               | review  | Subjective; visual inspection during eval review. |
 
 The eval runner is callable as `uv run scout review --evals`. CI (when
-it lands) runs it on every PR that touches `scout/reviewer/`. A drop in
-action-match below the gate fails the PR.
+it lands) runs it on every PR that touches `scout/reviewer/`. A drop
+below ANY gated metric fails the PR.
+
+**Catalog-thinness escape valve:** if the golden set has fewer than 5
+operator-labeled samples in a class, that class's gate is downgraded
+to "report only" — the metric is computed and visible, but doesn't
+block ship. This handles the realistic 9.0 launch state where the
+catalog is too thin for clean merge examples to exist (see F3 in the
+findings section). When the catalog grows past ~30 assets and the
+golden set is expanded, the gates re-engage.
 
 ### 9. Failure modes & required handling
 
@@ -351,6 +375,143 @@ docs/plans/phase-9-0-reviewer-agent.md    this file
 The Anthropic SDK lives in a `reviewer` dep group, not in core, so
 headless scout runs don't pull it.
 
+## Findings from v0 reconnaissance (2026-06-17)
+
+A reconnaissance pass labeled 17 of the 363 queue candidates as a v0
+golden set (`scout/reviewer/evals/golden.jsonl`). The act of labeling
+surfaced seven corrections to this plan. Each finding folds back into
+the design above; reread the design assuming they apply.
+
+### F1. Phase 6 dedup is a prerequisite, not just context
+
+**Observed:** The 363-item queue has zero candidates with a
+`mergeset_id`. Phase 6 has not run on this queue. The queue holds
+30+ children of `skills-for-humanity`, 5+ children of `lathe`,
+parent+child of `governor`, and 5+ near-duplicate Anthropic news
+articles — all of which Phase 6 should be collapsing first.
+
+**Correction:** `scout review` refuses to run on a queue with un-
+deduped state, and the runner invokes `scout dedup` as a precondition
+unless `--skip-dedup-precondition` is passed. The runbook documents
+this. The trigger model gains a precondition step:
+
+```
+scout sources → queue → dedup (REQUIRED before review) → liveness → reviewer → rollup
+```
+
+### F2. Parent-child sets are atomic decisions
+
+**Observed:** Phase 4's repo extractor produces parent + children
+candidates with `relations.parent` set. The keep/discard decision on
+the parent implies the decision on its children — you cannot
+`discard` a child whose parent is `keep` (orphans the child) or vice
+versa. The merge-rules don't model this; the v0 golden set has two
+parent-child pairs labeled `hard` for exactly this reason.
+
+**Correction:** The reviewer batches parent-child sets. When the
+runner sees a candidate with `relations.parent` set, it groups it
+with its parent into a single review. The `Decision` schema gains:
+
+```python
+class Decision(BaseModel):
+    action: Literal["keep", "merge", "discard"]
+    scope: Literal["self", "parent-with-children"] = "self"
+    # ...
+```
+
+A `scope: parent-with-children` decision writes one `Proposal` row
+per member of the set, all with the same `decision_audit_id` and the
+parent's `action`. The 8.3 triage UI accepts/rejects them as a batch.
+
+### F3. The natural action distribution is heavily skewed
+
+**Observed:** Roughly 75% of this queue is `discard` (news-shaped
+articles about Anthropic D.C. politics, the Fable jailbreak, etc.).
+An eval that just measures action-match is trivially gamed by
+always-discard (gets ~75% without thinking).
+
+**Correction:** Refine the eval to per-class precision/recall:
+
+| Metric                                                  | Target | Why                                                 |
+| ------------------------------------------------------- | ------ | --------------------------------------------------- |
+| `discard` precision (of items we discard, % truly discardable) | ≥ 95%  | A false-discard wastes operator time but is recoverable. Still, 5% is a real annoyance. |
+| `keep` precision (of items we keep, % truly keepable)   | ≥ 85%  | A false-keep pollutes the catalog forever. Hard floor. |
+| `keep` recall (of truly keepable items, % we keep)      | ≥ 70%  | A false-discard of a real asset is lost forever unless the operator re-runs scout. |
+| Confidence calibration (Brier score on `confidence`)    | ≤ 0.20 | High-confidence wrongs are worse than low-confidence wrongs. |
+
+Drop the bare action-match metric from the ship gate. Keep it as a
+reported summary.
+
+**Sequencing implication:** the v0 golden set has 0 `merge` examples
+(the catalog is too thin for clean merges to exist yet). The 30-item
+target with 10 merges is not achievable until the catalog grows past
+~30 assets. The ship gate uses whatever subset of the metrics has
+enough labeled samples (currently: `discard` precision and `keep`
+precision, both ≥ 5 samples each). Merge-quality gates land in a
+9.x revision after the catalog grows.
+
+### F4. Slugs need rename suggestions on `keep`
+
+**Observed:** Several candidates have terrible scout-extracted slugs:
+`show-hn-skills-for-humanity-171-structured-reasoning-skills`,
+`governor-a-claude-code-plugin-to-reduce-token-context-waste`,
+`claude-code-as-a-daily-driver-claude-md-skills-subagents-plu`. When
+the reviewer proposes `keep`, the operator currently renames by hand
+on promotion.
+
+**Correction:** Add `suggested_slug` to the `Decision` schema. The
+reviewer proposes a target slug per the naming convention; the 8.3
+triage UI surfaces it as an editable field. The proposal's payload
+carries it forward into the `triage keep` action which uses it as
+the final `/catalog/<slug>.md` filename.
+
+```python
+class Decision(BaseModel):
+    # ...
+    suggested_slug: str | None = None  # rename target on keep
+```
+
+### F5. "Famous person, low content" tension
+
+**Observed:** The antirez Twitter reaction is the entry every reviewer
+will struggle on. The candidate is `kind: article` but the rule about
+"load-bearing claims" applies; pure reaction has none. There's a case
+for tracking notable people via `kind: person` separately.
+
+**Correction:** The system prompt explicitly tells the reviewer:
+*content* drives the decision, not the *author's reputation*. A
+notable author writing a substantive analysis is a `keep`; the same
+author writing a one-line reaction is a `discard`. People-tracking
+(`kind: person`) is a separate workflow that the reviewer does NOT
+propose — it's operator-curated.
+
+### F6. Source URL subdirectory ambiguity
+
+**Observed:** `claude-api-fundamentals-course` points to
+`anthropics/courses/tree/master/anthropic_api_fundamentals`. Is the
+catalog entry for the subdir, or for the parent repo? Catalog
+convention doesn't say.
+
+**Correction:** The reviewer flags subdirectory URLs (`/tree/`,
+`/blob/`) and **never auto-picks** the parent. The proposal carries
+`payload.url_target: "subdir" | "parent" | "unsure"` and the 8.3 UI
+surfaces both options for the operator. The reviewer's bias when
+unsure: keep the subdirectory URL the candidate has.
+
+### F7. Author field is unreliable
+
+**Observed:** `academic-research-skills-for-claude-code` has
+`authors: [arnon]`, but "arnon" is the HN submitter — the repo owner
+is `Imbad0202`. The scout extractor confuses the two.
+
+**Correction:** The reviewer cross-checks `source.authors` against
+the URL's hostname (for GitHub URLs, against the repo owner segment).
+On mismatch, it flags `payload.author_mismatch: true` with a note.
+The 8.3 UI prompts the operator to choose the correct authorship.
+
+This is also a Phase 6 / scout fix candidate — but at the reviewer
+layer we catch it cheaply.
+
 ## Open questions to resolve during the session
 
 1. **What exactly goes into `nearby catalog assets`?** Top-5 by substring
@@ -391,7 +552,7 @@ headless scout runs don't pull it.
 | 8  | `scout/reviewer/cli.py` + wire into `scout/agent/cli.py`.                                         |                                        |
 | 9  | Optional tail step in `scout/agent/runner.py` (`--review`, default off).                          |                                        |
 | 10 | Integration tests (SDK mocked) covering batch, escalation, budget cap, idempotency.               |                                        |
-| 11 | Curate 30-item golden set; commit `scout/reviewer/evals/golden.jsonl`.                            | One-shot operator labor.               |
+| 11 | Operator-review the v0 17-item draft golden set; bump `labeled_by` to `operator`; add 13 more entries to reach 30.  | v0 drafts already in repo from reconnaissance pass. Operator labor: ~2 hours. |
 | 12 | Eval runner; document `uv run scout review --evals`.                                              |                                        |
 | 13 | `/command-center/runbooks/scout-review.md`: how to run, how to interpret rollup, how to tune.     |                                        |
 | 14 | `/conventions/merge-rules.md` update: "Phase 9 reviewer proposes; operator approves" section.     |                                        |
@@ -416,7 +577,9 @@ uv run scout review --dry-run --limit 5 -v
 
 # Eval (requires ANTHROPIC_API_KEY; ~$0.50)
 RUN_REVIEWER_EVALS=1 uv run pytest tests/evals/reviewer -q
-# Must report: action_match >= 0.80, target_slug_match >= 0.70.
+# Must report (per F3): discard_precision >= 0.95, keep_precision >= 0.85,
+# keep_recall >= 0.70, brier <= 0.20. Merge gate is "report only" until
+# the golden set has >= 10 operator-labeled merges.
 ```
 
 ## Production check (REQUIRED for 9.0)
