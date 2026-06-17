@@ -19,15 +19,17 @@ Public surface:
 
 from __future__ import annotations
 
-from .models import Asset, Base, IndexMeta
+from .models import Asset, AuditEvent, Base, IndexMeta, Proposal
 from .query import load_snapshot
 from .session import make_engine, make_session_factory, migrations_dir, resolve_dsn
 from .sync import SyncResult, sync
 
 __all__ = [
     "Asset",
+    "AuditEvent",
     "Base",
     "IndexMeta",
+    "Proposal",
     "SyncResult",
     "load_snapshot",
     "make_engine",

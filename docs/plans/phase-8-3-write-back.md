@@ -2,10 +2,12 @@
 name: phase-8-3-write-back
 title: "Phase 8.3 — Web command center write-back"
 phase: 8
-status: draft
+status: active
 created_at: 2026-06-17
 updated_at: 2026-06-17
 completed_at:
+# 2026-06-17: backend landed; frontend (FrontmatterForm, BodyEditor,
+# TriagePanel, ProposalCard + pages) deferred to 8.3b follow-up.
 supersedes: []
 superseded_by:
 related: [phase-8-web-command-center, phase-8-2-persistent-index, phase-9-0-reviewer-agent]

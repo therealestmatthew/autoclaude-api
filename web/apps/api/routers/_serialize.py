@@ -23,6 +23,7 @@ def to_summary(rec: AssetRecord) -> AssetSummary:
         created_at=rec.created_at,
         updated_at=rec.updated_at,
         issues=list(rec.issues),
+        version=rec.raw_hash,
     )
 
 
@@ -39,6 +40,7 @@ def to_detail(rec: AssetRecord) -> AssetDetail:
         created_at=rec.created_at,
         updated_at=rec.updated_at,
         issues=list(rec.issues),
+        version=rec.raw_hash,
         body=rec.body,
         source=rec.source,
         discovered=rec.discovered,

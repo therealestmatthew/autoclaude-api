@@ -67,8 +67,18 @@ class CachedIndex:
 
     def sync(self) -> SyncResult:
         """Run a sync without immediately materialising a snapshot. The
-        polling reconciler uses this so it doesn't pay the snapshot cost."""
-        return sync(Indexer(self._repo_root), self._session_factory)
+        polling reconciler uses this so it doesn't pay the snapshot cost.
+        Also sweeps orphan-pending audit rows (8.3) at the tail."""
+        result = sync(Indexer(self._repo_root), self._session_factory)
+        # Best-effort: a sweep failure shouldn't fail the sync.
+        try:
+            from .writes.audit import sweep_orphan_pending
+
+            with self._session_factory() as session:
+                sweep_orphan_pending(session)
+        except Exception:  # noqa: BLE001
+            pass
+        return result
 
 
 _cache: CachedIndex | None = None

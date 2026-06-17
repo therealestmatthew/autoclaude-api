@@ -7,6 +7,8 @@ when_to_run: "Any time you need to run, debug, or refresh the /web/ surface."
 last_used:
 last_verified: 2026-06-17
 updated_at: 2026-06-17
+# 2026-06-17: 8.3 backend (write-back + proposals) is now wired; the
+# frontend pages described below are 8.3b follow-up.
 ---
 
 # Runbook — Web command center
@@ -90,6 +92,8 @@ Backend env vars (read once at startup):
 | `AUTOCLAUDE_INDEX_DSN`       | `sqlite:///web/.data/index.sqlite` (resolved against `AUTOCLAUDE_REPO_ROOT`) | SQLAlchemy connection string. Override for Postgres in 8.5. |
 | `AUTOCLAUDE_INDEX_RECONCILE_INTERVAL` | `60`                                        | seconds between background syncs; `0` disables the loop (useful in tests). |
 | `AUTOCLAUDE_INDEX_AUTO_MIGRATE`| `1`                                                | run `alembic upgrade head` on API boot. Set `0` in production / CI to make migrations an explicit deploy step. |
+| `AUTOCLAUDE_GIT_AUTHOR_NAME`   | falls back to `git config user.name`               | author of web-driven commits (8.3 write-back). |
+| `AUTOCLAUDE_GIT_AUTHOR_EMAIL`  | falls back to `git config user.email`              | author email of web-driven commits. The backend refuses to write if neither env nor git config provides one. |
 
 Frontend env vars (`web/apps/web/.env.local`):
 
@@ -178,6 +182,9 @@ uv run pytest tests/integration/web -q
 | Tests                         | `/tests/unit/web/`, `/tests/integration/web/` |
 | Test fixtures                 | `/tests/fixtures/web/sample_repo/`      |
 | SQLite (gitignored)           | `/web/.data/index.sqlite`               |
+| Write-back service layer      | `/web/apps/api/writes/`                  |
+| Write-back endpoints          | `/web/apps/api/routers/writes.py`, `proposals.py` |
+| Write-back plan               | `/docs/plans/phase-8-3-write-back.md`   |
 
 ## Last-verified policy
 

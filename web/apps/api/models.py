@@ -48,6 +48,10 @@ class AssetSummary(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
     issues: list[str] = []
+    # 8.3: optimistic-lock token for write-back. UI passes this back as
+    # `expected_version` on any PUT/POST. Empty string means the indexer
+    # hasn't seen the row yet (pre-sync); writes should refetch first.
+    version: str = ""
 
 
 class AssetDetail(AssetSummary):
@@ -115,3 +119,131 @@ class ThreadResponse(BaseModel):
 class SyncResponse(BaseModel):
     stats: Stats
     rebuilt: bool = True
+
+
+# ---------------------------------------------------------------------------
+# Phase 8.3 — write-back wire shapes
+# ---------------------------------------------------------------------------
+
+
+class EditFrontmatterRequest(BaseModel):
+    frontmatter: dict
+    expected_version: str = Field(
+        description="Optimistic-lock token. Get from the asset detail response."
+    )
+    commit_message: str | None = None
+
+
+class EditBodyRequest(BaseModel):
+    body: str
+    expected_version: str
+    commit_message: str | None = None
+
+
+class EditFullRequest(BaseModel):
+    frontmatter: dict
+    body: str
+    expected_version: str
+    commit_message: str | None = None
+
+
+class WriteResponse(BaseModel):
+    path: str
+    commit_sha: str
+    new_version: str
+    audit_id: str
+
+
+class TriageRequest(BaseModel):
+    action: Literal["keep", "merge", "discard"]
+    expected_version: str
+    target_slug: str | None = Field(
+        default=None,
+        description="Required for `merge`; optional `keep` rename target.",
+    )
+    notes: str | None = Field(
+        default=None,
+        description="Required for `discard`; optional otherwise.",
+    )
+    commit_message: str | None = None
+
+
+class TriageResponse(BaseModel):
+    action: Literal["keep", "merge", "discard"]
+    source_path: str
+    target_path: str | None
+    commit_sha: str
+    new_version: str | None
+    audit_id: str
+
+
+# Proposals are 9.0's payload but the table lives behind 8.3.
+
+
+class ProposalSummary(BaseModel):
+    id: str
+    created_at: float
+    source: str
+    target_path: str
+    target_bucket: str
+    action_kind: str
+    summary: str
+    confidence: float | None = None
+    status: str
+
+
+class ProposalDetail(ProposalSummary):
+    payload: dict
+    rationale: str
+    decided_at: float | None = None
+    decided_by: str | None = None
+    decision_audit_id: str | None = None
+
+
+class ProposalListResponse(BaseModel):
+    items: list[ProposalSummary]
+    total: int
+
+
+class CreateProposalRequest(BaseModel):
+    source: Literal["operator", "reviewer-agent"] = "operator"
+    target_path: str
+    target_bucket: str
+    action_kind: Literal["keep", "merge", "discard", "edit"]
+    payload: dict
+    summary: str
+    rationale: str
+    confidence: float | None = None
+
+
+class RejectProposalRequest(BaseModel):
+    notes: str
+
+
+class AcceptProposalRequest(BaseModel):
+    # The accept endpoint pulls the if_match from the *target asset's*
+    # current version — accepting an old proposal against a moved target
+    # should 409. The optional override is for tests.
+    expected_version: str | None = None
+
+
+class AuditEventSummary(BaseModel):
+    id: str
+    created_at: float
+    updated_at: float
+    actor: str
+    action: str
+    target_path: str
+    target_bucket: str
+    status: str
+
+
+class AuditEventDetail(AuditEventSummary):
+    intent: dict
+    result: dict | None = None
+    notes: str | None = None
+
+
+class AuditListResponse(BaseModel):
+    items: list[AuditEventSummary]
+    total: int

@@ -151,6 +151,9 @@ def _apply_record(row: Asset, rec: AssetRecord, content_hash: str, run_id: str) 
     row.mtime = rec.mtime
     row.body = rec.body
     row.content_hash = content_hash
+    # 8.3 optimistic-lock token. Byte-for-byte SHA of the file content,
+    # set by the indexer; matches what writes/editor._hash_text returns.
+    row.version = rec.raw_hash or content_hash
     row.sync_run_id = run_id
 
 

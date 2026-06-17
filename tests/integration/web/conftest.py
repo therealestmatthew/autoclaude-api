@@ -11,6 +11,7 @@ driven before the TestClient is handed back.
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -71,5 +72,63 @@ def client(fixture_repo: Path, db_engine: Engine) -> TestClient:
     cache.force_rebuild()  # initial sync so routers have data to return.
     app.dependency_overrides[get_index] = lambda: cache
 
+    with TestClient(app) as tc:
+        yield tc
+
+
+def _git(repo: Path, *args: str) -> str:
+    out = subprocess.run(
+        ["git", *args],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=True,
+        env={
+            **__import__("os").environ,
+            "GIT_AUTHOR_NAME": "Test",
+            "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test",
+            "GIT_COMMITTER_EMAIL": "test@example.com",
+        },
+    )
+    return out.stdout
+
+
+@pytest.fixture
+def git_fixture_repo(fixture_repo: Path) -> Path:
+    """A fixture_repo with `git init` + an initial commit so write-back
+    tests have a clean tree to commit on top of."""
+    _git(fixture_repo, "init", "-q", "-b", "main")
+    _git(fixture_repo, "config", "user.email", "test@example.com")
+    _git(fixture_repo, "config", "user.name", "Test")
+    _git(fixture_repo, "config", "commit.gpgsign", "false")
+    _git(fixture_repo, "add", "-A")
+    _git(fixture_repo, "commit", "-q", "-m", "initial")
+    return fixture_repo
+
+
+@pytest.fixture
+def git_client(git_fixture_repo: Path, db_engine: Engine) -> TestClient:
+    """Same shape as `client`, but the underlying repo is a real git repo
+    so write-back endpoints actually exercise the commit pipeline."""
+    reset_cached_index()
+    reset_settings()
+    settings = Settings(
+        repo_root=git_fixture_repo,
+        host="127.0.0.1",
+        port=0,
+        cors_origins=(),
+        log_level="warning",
+        index_dsn=None,
+        reconcile_interval=0.0,
+        auto_migrate=False,
+    )
+    app = create_app(repo_root=git_fixture_repo, settings=settings)
+    factory = make_session_factory(db_engine)
+    cache = CachedIndex(
+        git_fixture_repo, engine=db_engine, session_factory=factory
+    )
+    cache.force_rebuild()
+    app.dependency_overrides[get_index] = lambda: cache
     with TestClient(app) as tc:
         yield tc

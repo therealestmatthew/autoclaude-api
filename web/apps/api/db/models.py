@@ -68,6 +68,12 @@ class Asset(Base):
     # is how we drop files that were removed from the repo.
     sync_run_id = Column(String(64), nullable=False)
 
+    # 8.3: optimistic-lock token. Equal to `content_hash` after sync;
+    # diverges briefly during an in-flight write while the file has been
+    # written but the sync hasn't re-read it yet. PUT/POST requests carry
+    # an `If-Match` header that must equal this value; mismatch -> 409.
+    version = Column(String(64), nullable=False, default="")
+
     __table_args__ = (
         Index("ix_asset_bucket_slug", "bucket", "slug"),
         Index("ix_asset_kind", "kind"),
@@ -86,3 +92,75 @@ class IndexMeta(Base):
     last_sync_run_id = Column(String(64), nullable=False)
     last_sync_record_count = Column(Integer, nullable=False, default=0)
     schema_version = Column(String(16), nullable=False)
+
+
+class AuditEvent(Base):
+    """Append-only log of every UI-driven write.
+
+    Created in `pending` state at the start of a write, finalised to
+    `committed` or `failed` after the file + git operations complete.
+    A row that stays in `pending` longer than one sync cycle (60s)
+    indicates a crash mid-write — the sweeper surfaces it in /health.
+    """
+
+    __tablename__ = "audit_event"
+
+    id = Column(String(36), primary_key=True)         # uuid4 hex
+    created_at = Column(Float, nullable=False)
+    updated_at = Column(Float, nullable=False)
+    # actor: 'operator' | 'reviewer-agent' | ...
+    actor = Column(String(64), nullable=False)
+    # action: edit-frontmatter | edit-body | edit-full | triage-keep |
+    # triage-merge | triage-discard | create-asset | archive
+    action = Column(String(64), nullable=False)
+    target_path = Column(String(1024), nullable=False)
+    target_bucket = Column(String(32), nullable=False)
+    # status: 'pending' | 'committed' | 'failed'
+    status = Column(String(16), nullable=False)
+    # intent: request payload (also captures pre-state snapshot)
+    intent = Column(JSON, nullable=False)
+    # result: commit_sha, error trace, etc.
+    result = Column(JSON, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("ix_audit_event_target_path", "target_path"),
+        Index("ix_audit_event_status", "status"),
+        Index("ix_audit_event_created_at", "created_at"),
+    )
+
+
+class Proposal(Base):
+    """Reviewer-agent recommendations (or operator drafts) awaiting a
+    decision. Phase 9.0 fills this with `source='reviewer-agent'` rows;
+    the triage UI surfaces them and writes the decision to the audit
+    log on accept/reject."""
+
+    __tablename__ = "proposal"
+
+    id = Column(String(36), primary_key=True)
+    created_at = Column(Float, nullable=False)
+    # source: 'operator' | 'reviewer-agent'
+    source = Column(String(64), nullable=False)
+    target_path = Column(String(1024), nullable=False)
+    target_bucket = Column(String(32), nullable=False)
+    # action_kind: keep | merge | discard | edit
+    action_kind = Column(String(32), nullable=False)
+    # payload: action-specific args (target_slug, notes, ...)
+    payload = Column(JSON, nullable=False)
+    summary = Column(Text, nullable=False)
+    rationale = Column(Text, nullable=False)
+    # confidence: 0..1, reviewer-agent only
+    confidence = Column(Float, nullable=True)
+    # status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'superseded'
+    status = Column(String(16), nullable=False)
+    decided_at = Column(Float, nullable=True)
+    decided_by = Column(String(64), nullable=True)
+    decision_audit_id = Column(String(36), nullable=True)
+
+    __table_args__ = (
+        Index("ix_proposal_source", "source"),
+        Index("ix_proposal_target_path", "target_path"),
+        Index("ix_proposal_status", "status"),
+        Index("ix_proposal_created_at", "created_at"),
+    )

@@ -26,6 +26,9 @@ export interface AssetSummary {
   created_at: string | null;
   updated_at: string | null;
   issues: string[];
+  // 8.3: optimistic-lock token. UI passes this back as
+  // `expected_version` on any PUT/POST. Empty before first sync.
+  version: string;
 }
 
 export interface AssetDetail extends AssetSummary {
@@ -90,4 +93,84 @@ export interface Health {
   version: string;
   repo_root: string;
   records: number;
+}
+
+// ---------------------------------------------------------------------------
+// 8.3 — write-back wire shapes
+// ---------------------------------------------------------------------------
+
+export interface EditFrontmatterRequest {
+  frontmatter: Record<string, unknown>;
+  expected_version: string;
+  commit_message?: string | null;
+}
+
+export interface EditBodyRequest {
+  body: string;
+  expected_version: string;
+  commit_message?: string | null;
+}
+
+export interface EditFullRequest {
+  frontmatter: Record<string, unknown>;
+  body: string;
+  expected_version: string;
+  commit_message?: string | null;
+}
+
+export interface WriteResponse {
+  path: string;
+  commit_sha: string;
+  new_version: string;
+  audit_id: string;
+}
+
+export interface TriageRequest {
+  action: "keep" | "merge" | "discard";
+  expected_version: string;
+  target_slug?: string | null;
+  notes?: string | null;
+  commit_message?: string | null;
+}
+
+export interface TriageResponse {
+  action: "keep" | "merge" | "discard";
+  source_path: string;
+  target_path: string | null;
+  commit_sha: string;
+  new_version: string | null;
+  audit_id: string;
+}
+
+export interface ProposalSummary {
+  id: string;
+  created_at: number;
+  source: string;
+  target_path: string;
+  target_bucket: string;
+  action_kind: string;
+  summary: string;
+  confidence: number | null;
+  status: string;
+}
+
+export interface ProposalDetail extends ProposalSummary {
+  payload: Record<string, unknown>;
+  rationale: string;
+  decided_at: number | null;
+  decided_by: string | null;
+  decision_audit_id: string | null;
+}
+
+export interface ProposalListResponse {
+  items: ProposalSummary[];
+  total: number;
+}
+
+export interface AcceptProposalRequest {
+  expected_version?: string | null;
+}
+
+export interface RejectProposalRequest {
+  notes: string;
 }

@@ -29,10 +29,12 @@ from .routers import (
     catalog,
     conventions,
     engagements,
+    proposals,
     queue,
     search,
     stats,
     threads,
+    writes,
 )
 from .routers.deps import get_index
 from .settings import Settings, get_settings
@@ -156,6 +158,8 @@ def create_app(
     app.include_router(conventions.router)
     app.include_router(threads.router)
     app.include_router(search.router)
+    app.include_router(writes.router)
+    app.include_router(proposals.router)
 
     return app
 

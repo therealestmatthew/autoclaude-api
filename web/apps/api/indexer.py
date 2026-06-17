@@ -14,6 +14,7 @@ sorted by path. Tests rely on this.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
@@ -87,6 +88,13 @@ class AssetRecord:
     body: str
     issues: tuple[str, ...]
     mtime: float
+    # 8.3: SHA-256 of the raw file bytes. Used as the optimistic-lock
+    # token (`version`) by write-back. Different from the sync engine's
+    # `content_hash` (which is a JSON-normalised hash of the record's
+    # wire-shape fields and ignores byte-for-byte differences like
+    # whitespace). For writes, we want byte-for-byte sensitivity so the
+    # operator sees a 409 if anything at all changed under them.
+    raw_hash: str = ""
 
 
 @dataclass(frozen=True)
@@ -299,6 +307,10 @@ def _record_from_path(path: Path, repo_root: Path) -> AssetRecord:
     except OSError:
         mtime = 0.0
 
+    raw_hash = (
+        hashlib.sha256(text.encode("utf-8")).hexdigest() if read_ok else ""
+    )
+
     return AssetRecord(
         path=rel,
         bucket=bucket,
@@ -316,6 +328,7 @@ def _record_from_path(path: Path, repo_root: Path) -> AssetRecord:
         body=_split_body(text),
         issues=tuple(issues),
         mtime=mtime,
+        raw_hash=raw_hash,
     )
 
 

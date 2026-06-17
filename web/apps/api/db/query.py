@@ -32,6 +32,7 @@ def _row_to_record(row: Asset) -> AssetRecord:
         body=row.body or "",
         issues=tuple(row.issues or ()),
         mtime=row.mtime,
+        raw_hash=row.version or "",
     )
 
 
