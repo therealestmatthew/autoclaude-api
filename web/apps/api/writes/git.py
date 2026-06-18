@@ -100,12 +100,45 @@ def resolve_author(repo_root: Path) -> tuple[str, str]:
 
 
 def add_paths(repo_root: Path, paths: Iterable[Path]) -> None:
+    """Stage the given paths. Uses `git add -A -- <path>` per-path so
+    deletions are picked up alongside modifications and additions.
+
+    Per-path, not bulk: `git add -A -- A B` is all-or-nothing on the
+    command line — if A doesn't match (e.g. it's gitignored or was
+    deleted before this call), git errors out and B is never staged.
+    Looping per-path with a try/except lets each path's outcome stand
+    on its own.
+
+    Tolerates "pathspec did not match" errors: queue files are
+    gitignored in the main repo, so a triage that deletes a queue file
+    will have nothing for git to stage on the queue side. That's not a
+    failure — the catalog-side change (if any) is what we commit. If
+    neither side has anything to stage, the caller's `commit()` becomes
+    a no-op.
+    """
     rels = [
         str(p.resolve().relative_to(repo_root.resolve())) for p in paths
     ]
-    if not rels:
-        return
-    _run(repo_root, ["add", "--", *rels])
+    for rel in rels:
+        try:
+            _run(repo_root, ["add", "-A", "--", rel])
+        except GitError as e:
+            if "did not match any files" in e.stderr:
+                continue
+            raise
+
+
+def is_anything_staged(repo_root: Path) -> bool:
+    """True if `git diff --cached` has any changes."""
+    completed = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    # exit 0: no diff, 1: diff present.
+    return completed.returncode != 0
 
 
 def commit(
@@ -116,7 +149,9 @@ def commit(
     author_name: str | None = None,
     author_email: str | None = None,
 ) -> str:
-    """Stage the given paths and commit them. Returns the new SHA.
+    """Stage the given paths and commit them. Returns the new SHA, or
+    the current HEAD SHA if nothing was staged (e.g. all the paths were
+    gitignored — common for triage-discard on queue items).
 
     Never uses `--no-verify`; hook failures propagate.
     """
@@ -126,6 +161,11 @@ def commit(
         author_email = author_email or a_email
 
     add_paths(repo_root, paths)
+    if not is_anything_staged(repo_root):
+        # No-op commit: nothing the write actually touched is tracked.
+        # Return HEAD so the caller has a stable SHA to record.
+        return head_sha(repo_root)
+
     _run(
         repo_root,
         [

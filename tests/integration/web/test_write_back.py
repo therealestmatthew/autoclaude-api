@@ -246,6 +246,126 @@ def test_proposal_reject_records_audit(git_client: TestClient) -> None:
     assert d["decision_audit_id"]
 
 
+# ---------------------------------------------------------------------------
+# Regression tests for the gitignored-queue bug (surfaced during 8.3 dogfood)
+# ---------------------------------------------------------------------------
+
+
+def test_triage_keep_with_gitignored_queue(
+    git_client: TestClient, git_fixture_repo: Path
+) -> None:
+    """Real-world: the main repo's .gitignore covers scout/queue/*.md so
+    queue files are never tracked. The triage keep should:
+      - delete the source queue file (safe; it was untracked)
+      - create + commit the new catalog file
+      - NOT 500 on `git add` against the untracked source.
+
+    The fixture's .gitignore un-ignores everything (`!*`); we layer a
+    gitignore line on top of it and re-commit, so this single test
+    captures the production behavior.
+    """
+    # Layer a queue-gitignore on top of the fixture's `!*`.
+    gitignore = git_fixture_repo / ".gitignore"
+    text = gitignore.read_text() if gitignore.exists() else ""
+    gitignore.write_text(text + "\n/scout/queue/*.md\n")
+    _git(git_fixture_repo, "add", ".gitignore")
+    _git(
+        git_fixture_repo,
+        "-c", "user.email=t@x", "-c", "user.name=t",
+        "commit", "-q", "-m", "gitignore queue",
+    )
+    # Confirm the fixture queue file is now untracked.
+    queue_path = "scout/queue/2026-06-15-fresh-candidate-abcd1234.md"
+    _git(git_fixture_repo, "rm", "--cached", "-q", queue_path)
+    _git(
+        git_fixture_repo,
+        "-c", "user.email=t@x", "-c", "user.name=t",
+        "commit", "-q", "-m", "untrack queue",
+    )
+
+    # Re-sync so the API picks up the now-untracked file's version.
+    git_client.post("/sync")
+
+    queue_item = git_client.get("/queue/fresh-candidate").json()
+    r = git_client.post(
+        f"/queue/{queue_item['slug']}/triage",
+        json={"action": "keep", "expected_version": queue_item["version"]},
+    )
+    assert r.status_code == 200, r.text
+    payload = r.json()
+    # The catalog file landed AND a new commit was made.
+    catalog_target = git_fixture_repo / "catalog" / "fresh-candidate.md"
+    assert catalog_target.exists()
+    assert payload["commit_sha"]
+    log = subprocess.run(
+        ["git", "log", "-1", "--name-only", "--format=%H"],
+        cwd=str(git_fixture_repo),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert "catalog/fresh-candidate.md" in log
+    assert payload["commit_sha"] == log.splitlines()[0]
+
+
+def test_triage_discard_with_gitignored_queue(
+    git_client: TestClient, git_fixture_repo: Path
+) -> None:
+    """Discard of a gitignored queue file: file deleted, audit row stays
+    in `committed`, NO new git commit (nothing tracked to commit)."""
+    gitignore = git_fixture_repo / ".gitignore"
+    text = gitignore.read_text() if gitignore.exists() else ""
+    gitignore.write_text(text + "\n/scout/queue/*.md\n")
+    _git(git_fixture_repo, "add", ".gitignore")
+    _git(
+        git_fixture_repo,
+        "-c", "user.email=t@x", "-c", "user.name=t",
+        "commit", "-q", "-m", "gitignore queue",
+    )
+    _git(
+        git_fixture_repo, "rm", "--cached", "-q",
+        "scout/queue/2026-06-15-fresh-candidate-abcd1234.md",
+    )
+    _git(
+        git_fixture_repo,
+        "-c", "user.email=t@x", "-c", "user.name=t",
+        "commit", "-q", "-m", "untrack queue",
+    )
+
+    head_before = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(git_fixture_repo),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+
+    git_client.post("/sync")
+    queue_item = git_client.get("/queue/fresh-candidate").json()
+    r = git_client.post(
+        f"/queue/{queue_item['slug']}/triage",
+        json={
+            "action": "discard",
+            "expected_version": queue_item["version"],
+            "notes": "test discard",
+        },
+    )
+    assert r.status_code == 200, r.text
+    # No new commit; HEAD unchanged.
+    head_after = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(git_fixture_repo),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert head_after == head_before
+    # Queue file deleted from disk.
+    assert not (
+        git_fixture_repo / "scout/queue/2026-06-15-fresh-candidate-abcd1234.md"
+    ).exists()
+
+
 def test_proposal_list_filters(git_client: TestClient) -> None:
     git_client.post(
         "/proposals",
