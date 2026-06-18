@@ -191,6 +191,7 @@ def triage_queue(
             new_version=result.new_version,
             audit_id=audit.id,
             commit_created=result.commit_created,
+            cascade=list(result.cascade),
         )
     finally:
         session.close()

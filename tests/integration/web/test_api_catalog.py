@@ -7,9 +7,9 @@ def test_list_catalog(client) -> None:
     r = client.get("/catalog")
     assert r.status_code == 200
     body = r.json()
-    assert body["total"] == 2
+    assert body["total"] == 4
     slugs = {item["slug"] for item in body["items"]}
-    assert {"alpha-tool", "beta-skill"} <= slugs
+    assert {"alpha-tool", "beta-skill", "child-a", "child-b"} <= slugs
 
 
 def test_get_catalog_asset(client) -> None:
@@ -31,8 +31,10 @@ def test_filter_by_kind(client) -> None:
     r = client.get("/catalog?kind=skill")
     assert r.status_code == 200
     items = r.json()["items"]
-    assert len(items) == 1
-    assert items[0]["slug"] == "beta-skill"
+    assert len(items) == 2
+    slugs = {it["slug"] for it in items}
+    assert "beta-skill" in slugs
+    assert "child-b" in slugs
 
 
 def test_search_substring(client) -> None:

@@ -82,8 +82,8 @@ def test_stats(fixture_repo: Path) -> None:
     snapshot = Indexer(fixture_repo).scan()
     stats = snapshot.stats()
     assert stats.total == len(snapshot.records)
-    assert stats.by_bucket["catalog"] == 2
-    assert stats.by_bucket["queue"] == 1
+    assert stats.by_bucket["catalog"] == 4
+    assert stats.by_bucket["queue"] == 2
     assert stats.by_bucket["engagement"] == 1
     # All listed buckets are in the enum.
     for b in stats.by_bucket:

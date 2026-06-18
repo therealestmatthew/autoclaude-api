@@ -10,8 +10,8 @@ def test_stats(client) -> None:
     r = client.get("/stats")
     assert r.status_code == 200
     body = r.json()["stats"]
-    assert body["by_bucket"].get("catalog") == 2
-    assert body["by_bucket"].get("queue") == 1
+    assert body["by_bucket"].get("catalog") == 4
+    assert body["by_bucket"].get("queue") == 2
 
 
 def test_sync_forces_rebuild(client) -> None:

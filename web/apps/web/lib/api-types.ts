@@ -142,6 +142,7 @@ export interface TriageResponse {
   new_version: string | null;
   audit_id: string;
   commit_created: boolean;
+  cascade: { slug: string; new_parent: string }[];
 }
 
 export interface ProposalSummary {

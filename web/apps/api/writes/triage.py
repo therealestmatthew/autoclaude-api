@@ -7,8 +7,9 @@ file operations and a single git commit.
 from __future__ import annotations
 
 import contextlib
+import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ from . import fs, git, serialize
 from .editor import DirtyTree, VersionMismatch, _hash_text
 
 _TRIAGE_LOCK = threading.Lock()
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -27,10 +29,73 @@ class TriageResult:
     commit_sha: str
     new_version: str | None           # version of the catalog file post-write
     commit_created: bool              # True iff a new SHA was produced
+    cascade: tuple = field(default_factory=tuple)
+    # Each element is {"slug": str, "new_parent": str} for updated children.
 
 
 def _read(p: Path) -> str:
     return p.read_text(encoding="utf-8") if p.is_file() else ""
+
+
+def _cascade_parent_rename(
+    repo_root: Path,
+    old_slug: str,
+    new_slug: str,
+) -> list[dict[str, str]]:
+    """Rewrite `relations.parent` from old_slug → new_slug in catalog files.
+
+    Also rewrites queue files (no commit needed — they are gitignored). The
+    cascade is best-effort: a malformed or dirty file is skipped with a warning.
+
+    Returns a list of {slug, new_parent} for each catalog file committed.
+    """
+    cascaded: list[dict[str, str]] = []
+
+    def _rewrite_file(md_file: Path, commit: bool) -> bool:
+        try:
+            text = md_file.read_text(encoding="utf-8")
+        except OSError as e:
+            _log.warning("cascade: could not read %s: %s", md_file, e)
+            return False
+        fm = serialize.parse_frontmatter(text)
+        relations = fm.get("relations")
+        if not isinstance(relations, dict):
+            return False
+        if relations.get("parent") != old_slug:
+            return False
+        relations["parent"] = new_slug
+        fm["relations"] = relations
+        new_text = serialize.replace_frontmatter(text, fm)
+        try:
+            fs.atomic_write(md_file, new_text)
+        except Exception as e:
+            _log.warning("cascade: could not write %s: %s", md_file, e)
+            return False
+        if commit:
+            child_slug = md_file.stem
+            msg = f"web: cascade parent rename {old_slug} -> {new_slug} ({child_slug})"
+            try:
+                git.commit(repo_root, paths=[md_file], message=msg, must_commit=True)
+                return True
+            except Exception as e:
+                _log.warning("cascade: commit failed for %s: %s", md_file, e)
+                return False
+        return True
+
+    # Catalog children — commit each one.
+    catalog_dir = repo_root / "catalog"
+    if catalog_dir.is_dir():
+        for md_file in sorted(catalog_dir.glob("*.md")):
+            if _rewrite_file(md_file, commit=True):
+                cascaded.append({"slug": md_file.stem, "new_parent": new_slug})
+
+    # Queue children — rewrite but no commit (gitignored).
+    queue_dir = repo_root / "scout" / "queue"
+    if queue_dir.is_dir():
+        for md_file in sorted(queue_dir.glob("*.md")):
+            _rewrite_file(md_file, commit=False)
+
+    return cascaded
 
 
 def _refuse_dirty(repo_root: Path, paths: list[Path]) -> None:
@@ -71,7 +136,9 @@ def triage_keep(
 
         fm = serialize.parse_frontmatter(source_text)
         body = serialize.parse_body(source_text)
-        chosen_slug = target_slug or fm.get("name") or source.stem
+        # Capture the original queue slug BEFORE mutating fm.
+        original_slug = fm.get("name") or source.stem
+        chosen_slug = target_slug or original_slug
         # Bake the catalog frontmatter shape: status reviewed, updated_at
         # bumped, name set to chosen_slug.
         fm["name"] = chosen_slug
@@ -112,6 +179,16 @@ def triage_keep(
                 pass
             raise
 
+        # If the operator renamed the candidate, rewrite any catalog/queue files
+        # whose relations.parent pointed at the original slug. Each catalog child
+        # gets its own commit; queue files are updated in place (gitignored).
+        if target_slug and target_slug != original_slug:
+            cascade = tuple(
+                _cascade_parent_rename(repo_root, old_slug=original_slug, new_slug=target_slug)
+            )
+        else:
+            cascade = ()
+
         return TriageResult(
             action="keep",
             source_path=queue_rel,
@@ -119,6 +196,7 @@ def triage_keep(
             commit_sha=sha,
             new_version=_hash_text(new_text),
             commit_created=created,
+            cascade=cascade,
         )
 
 

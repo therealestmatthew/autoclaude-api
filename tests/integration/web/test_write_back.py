@@ -215,6 +215,46 @@ def test_triage_merge_404_when_target_missing(git_client: TestClient) -> None:
     assert r.json()["detail"]["code"] == "target-not-found"
 
 
+def test_triage_keep_with_rename_cascades_to_catalog_children(
+    git_client: TestClient, git_fixture_repo: Path
+) -> None:
+    """When triage_keep renames a candidate, catalog children whose
+    relations.parent matches the old slug are rewritten and committed.
+
+    Fixture: old-parent (queue) + child-a + child-b (both catalog, parent=old-parent).
+    After triage_keep with target_slug='new-parent', both children should
+    point at 'new-parent' and each should have a new commit in git history.
+    """
+    queue_item = _get_asset(git_client, "queue", "old-parent")
+    r = git_client.post(
+        f"/queue/{queue_item['slug']}/triage",
+        json={
+            "action": "keep",
+            "expected_version": queue_item["version"],
+            "target_slug": "new-parent",
+        },
+    )
+    assert r.status_code == 200, r.text
+    payload = r.json()
+    assert payload["target_path"] == "catalog/new-parent.md"
+
+    # Both children must appear in the cascade list.
+    cascade_slugs = {c["slug"] for c in payload["cascade"]}
+    assert cascade_slugs == {"child-a", "child-b"}
+    for c in payload["cascade"]:
+        assert c["new_parent"] == "new-parent"
+
+    # Catalog files should have the updated parent slug.
+    child_a = git_fixture_repo / "catalog" / "child-a.md"
+    child_b = git_fixture_repo / "catalog" / "child-b.md"
+    assert "parent: new-parent" in child_a.read_text()
+    assert "parent: new-parent" in child_b.read_text()
+
+    # Each child should have its own cascade commit in git history.
+    log = _git(git_fixture_repo, "log", "--oneline", "-10")
+    assert "cascade parent rename" in log
+
+
 def test_triage_keep_409_on_stale_version(git_client: TestClient) -> None:
     queue_item = _get_asset(git_client, "queue", "fresh-candidate")
     r = git_client.post(

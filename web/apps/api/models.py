@@ -177,6 +177,8 @@ class TriageResponse(BaseModel):
     new_version: str | None
     audit_id: str
     commit_created: bool = True
+    cascade: list[dict[str, str]] = Field(default_factory=list)
+    # Each element is {"slug": str, "new_parent": str} for rewritten children.
 
 
 # Proposals are 9.0's payload but the table lives behind 8.3.

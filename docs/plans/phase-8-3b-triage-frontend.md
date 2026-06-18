@@ -2,10 +2,10 @@
 name: phase-8-3b-triage-frontend
 title: "Phase 8.3b — triage frontend (narrow) + cascade-on-rename"
 phase: 8
-status: draft
+status: done
 created_at: 2026-06-17
-updated_at: 2026-06-17
-completed_at:
+updated_at: 2026-06-18
+completed_at: 2026-06-18
 supersedes: []
 superseded_by:
 related:
