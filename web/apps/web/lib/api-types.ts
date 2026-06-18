@@ -176,3 +176,12 @@ export interface AcceptProposalRequest {
 export interface RejectProposalRequest {
   notes: string;
 }
+
+export interface AssetRaw {
+  path: string;
+  bucket: string;
+  slug: string;
+  frontmatter: Record<string, unknown>;
+  body: string;
+  version: string;
+}

@@ -2,16 +2,25 @@
 name: phase-8-3-write-back
 title: "Phase 8.3 — Web command center write-back"
 phase: 8
-status: active
+status: done
 created_at: 2026-06-17
-updated_at: 2026-06-17
-completed_at:
-# 2026-06-17: backend landed; frontend (FrontmatterForm, BodyEditor,
-# TriagePanel, ProposalCard + pages) deferred to 8.3b follow-up.
+updated_at: 2026-06-18
+completed_at: 2026-06-18
+# 2026-06-17: backend landed; frontend deferred to 8.3b follow-up.
+# 2026-06-18: frontend landed — FrontmatterForm, BodyEditor, TriagePanel,
+# ProposalCard + catalog/[slug]/edit, extended queue/[slug], proposals/.
+# New backend route GET /catalog/{slug}/raw added so the frontmatter
+# editor round-trips every key (incl. extras like `fingerprint`/`scout`).
+# Residuals: 8.3b's G1 (parent-rename cascade) + polish items
+# (slug-collision live check, catalog-slug autocomplete on merge) — see
+# docs/plans/session_prompts/phase-8-3-frontend-followup.md.
 supersedes: []
 superseded_by:
-related: [phase-8-web-command-center, phase-8-2-persistent-index, phase-9-0-reviewer-agent]
-locked_decisions: []
+related: [phase-8-web-command-center, phase-8-2-persistent-index, phase-8-3-hardening, phase-8-3b-triage-frontend, phase-9-0-reviewer-agent]
+locked_decisions:
+  - "Editor uses GET /catalog/{slug}/raw (parsed full frontmatter dict + body + version), not /catalog/{slug}. Required so saves don't lose untyped frontmatter keys like `fingerprint`."
+  - "Optimistic-lock token is the SHA-256 of raw file bytes (`raw_hash`). UI passes it back as `expected_version`; 409 banners offer a one-click reload."
+  - "next.config.mjs experimental.typedRoutes is OFF; the codebase uses template-string hrefs that the experiment rejects."
 ---
 
 # Phase 8.3 — Web command center write-back

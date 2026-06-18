@@ -2,6 +2,8 @@ import { api } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { MarkdownBody } from "@/components/MarkdownBody";
 import { Badge } from "@/components/Badge";
+import { TriagePanel } from "@/components/TriagePanel";
+import { ProposalCard } from "@/components/ProposalCard";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,19 @@ export default async function QueueDetail({
     if (e instanceof Error && e.message.includes("404")) notFound();
     throw e;
   }
+
+  // Pending proposals scoped to this queue path. Failure is non-fatal
+  // — the triage panel still works without proposals.
+  let proposals: Awaited<ReturnType<typeof api.proposals.list>> | null = null;
+  try {
+    proposals = await api.proposals.list({
+      status: "pending",
+      target_path: asset.path,
+    });
+  } catch {
+    proposals = null;
+  }
+
   const sourceUrl =
     typeof asset.source?.url === "string" ? (asset.source.url as string) : null;
   return (
@@ -40,7 +55,26 @@ export default async function QueueDetail({
           )}
         </div>
       </header>
-      <MarkdownBody source={asset.body} />
+
+      <TriagePanel slug={asset.slug} initialVersion={asset.version} />
+
+      {proposals && proposals.items.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs uppercase tracking-wider text-zinc-500">
+            Pending proposals ({proposals.items.length})
+          </h2>
+          <div className="space-y-2">
+            {proposals.items.map((p) => (
+              <ProposalCard key={p.id} proposal={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-2">
+        <h2 className="text-xs uppercase tracking-wider text-zinc-500">Body</h2>
+        <MarkdownBody source={asset.body} />
+      </section>
     </article>
   );
 }

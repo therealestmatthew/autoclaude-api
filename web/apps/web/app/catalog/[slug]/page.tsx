@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { MarkdownBody } from "@/components/MarkdownBody";
@@ -21,9 +22,17 @@ export default async function CatalogDetail({
   return (
     <article className="space-y-6">
       <header>
-        <div className="flex items-center gap-2 text-xs text-zinc-500 mb-2">
-          <span>catalog</span> <span>·</span>
-          <code className="font-mono">{asset.path}</code>
+        <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 mb-2">
+          <div className="flex items-center gap-2">
+            <span>catalog</span> <span>·</span>
+            <code className="font-mono">{asset.path}</code>
+          </div>
+          <Link
+            href={`/catalog/${asset.slug}/edit`}
+            className="rounded border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-xs hover:bg-zinc-50 dark:hover:bg-zinc-900"
+          >
+            Edit
+          </Link>
         </div>
         <h1 className="text-2xl font-semibold">{asset.title ?? asset.slug}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-2">

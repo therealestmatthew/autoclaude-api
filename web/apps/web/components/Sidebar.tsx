@@ -10,6 +10,7 @@ import {
   BookOpen,
   ScrollText,
   Activity,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -17,6 +18,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/catalog", label: "Catalog", Icon: Database },
   { href: "/queue", label: "Queue", Icon: Inbox },
+  { href: "/proposals", label: "Proposals", Icon: ClipboardList },
   { href: "/threads", label: "Threads", Icon: Activity },
   { href: "/engagements", label: "Engagements", Icon: Briefcase },
   { href: "/conventions", label: "Conventions", Icon: BookOpen },
@@ -37,8 +39,7 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 px-2 py-3 space-y-0.5">
         {NAV.map(({ href, label, Icon }) => {
-          const active =
-            pathname === href || (href !== "/" && pathname.startsWith(href));
+          const active = pathname === href || pathname.startsWith(href);
           return (
             <Link
               key={href}
@@ -57,7 +58,7 @@ export function Sidebar() {
         })}
       </nav>
       <div className="px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500">
-        Phase 8.1 · read-only
+        Phase 8.3 · write-back
       </div>
     </aside>
   );
