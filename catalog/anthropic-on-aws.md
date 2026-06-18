@@ -3,7 +3,8 @@ name: anthropic-on-aws
 kind: repo
 title: Anthropic on AWS
 status: reviewed
-tags: []
+tags:
+- test-tag
 source:
   type: github
   url: https://github.com/aws-samples/anthropic-on-aws
