@@ -53,6 +53,7 @@ def test_edit_frontmatter_commits(
     assert r.status_code == 200, r.text
     payload = r.json()
     assert payload["commit_sha"]
+    assert payload["commit_created"] is True
     assert payload["new_version"] != asset["version"]
     # File on disk has the new title.
     file_path = git_fixture_repo / asset["path"]
@@ -177,6 +178,43 @@ def test_triage_merge_into_existing(
     assert not (git_fixture_repo / queue_item["path"]).exists()
 
 
+def test_triage_keep_409_when_target_exists(git_client: TestClient) -> None:
+    """Keeping with `target_slug` pointing at an existing catalog file
+    must return 409 with `code: target-exists` so the operator can
+    pick a different slug or switch to merge.
+
+    Pre-8.3-hardening this surfaced as a 500 (FileExistsError bubbled
+    raw).
+    """
+    queue_item = _get_asset(git_client, "queue", "fresh-candidate")
+    r = git_client.post(
+        f"/queue/{queue_item['slug']}/triage",
+        json={
+            "action": "keep",
+            "expected_version": queue_item["version"],
+            "target_slug": "alpha-tool",  # already in the catalog.
+        },
+    )
+    assert r.status_code == 409, r.text
+    assert r.json()["detail"]["code"] == "target-exists"
+
+
+def test_triage_merge_404_when_target_missing(git_client: TestClient) -> None:
+    """Merging into a non-existent target slug must 404 with
+    `code: target-not-found`."""
+    queue_item = _get_asset(git_client, "queue", "fresh-candidate")
+    r = git_client.post(
+        f"/queue/{queue_item['slug']}/triage",
+        json={
+            "action": "merge",
+            "expected_version": queue_item["version"],
+            "target_slug": "does-not-exist",
+        },
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["detail"]["code"] == "target-not-found"
+
+
 def test_triage_keep_409_on_stale_version(git_client: TestClient) -> None:
     queue_item = _get_asset(git_client, "queue", "fresh-candidate")
     r = git_client.post(
@@ -297,6 +335,7 @@ def test_triage_keep_with_gitignored_queue(
     catalog_target = git_fixture_repo / "catalog" / "fresh-candidate.md"
     assert catalog_target.exists()
     assert payload["commit_sha"]
+    assert payload["commit_created"] is True
     log = subprocess.run(
         ["git", "log", "-1", "--name-only", "--format=%H"],
         cwd=str(git_fixture_repo),
@@ -351,6 +390,12 @@ def test_triage_discard_with_gitignored_queue(
         },
     )
     assert r.status_code == 200, r.text
+    payload = r.json()
+    # Audit-honesty: the response reports commit_created=False so the
+    # operator (and later the reviewer agent) can tell "this was a
+    # genuine no-op discard" apart from "the writer expected a commit
+    # and didn't get one."
+    assert payload["commit_created"] is False
     # No new commit; HEAD unchanged.
     head_after = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -360,6 +405,7 @@ def test_triage_discard_with_gitignored_queue(
         check=True,
     ).stdout.strip()
     assert head_after == head_before
+    assert payload["commit_sha"] == head_after
     # Queue file deleted from disk.
     assert not (
         git_fixture_repo / "scout/queue/2026-06-15-fresh-candidate-abcd1234.md"

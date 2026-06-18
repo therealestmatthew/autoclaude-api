@@ -27,6 +27,13 @@ class GitError(RuntimeError):
         )
 
 
+class NothingToCommit(RuntimeError):
+    """Raised when `commit()` was called with `must_commit=True` but the
+    add step left nothing staged. Distinguishes a real failure (the writer
+    expected a commit and didn't get one) from an intentional no-op such
+    as `triage_discard` of a gitignored queue file."""
+
+
 def _run(repo_root: Path, args: list[str], *, env: dict[str, str] | None = None) -> str:
     cmd = ["git", *args]
     completed = subprocess.run(
@@ -146,12 +153,26 @@ def commit(
     *,
     paths: Iterable[Path],
     message: str,
+    must_commit: bool = True,
     author_name: str | None = None,
     author_email: str | None = None,
-) -> str:
-    """Stage the given paths and commit them. Returns the new SHA, or
-    the current HEAD SHA if nothing was staged (e.g. all the paths were
-    gitignored — common for triage-discard on queue items).
+) -> tuple[str, bool]:
+    """Stage the given paths and commit them.
+
+    Returns `(sha, commit_created)`:
+    - `commit_created=True` — a new commit was made; `sha` is the new HEAD.
+    - `commit_created=False` — nothing was staged (every path was either
+      gitignored or untracked-and-deleted). `sha` is the current HEAD.
+
+    If `must_commit=True` (the default) and nothing was staged,
+    `NothingToCommit` is raised. The caller promised a commit and didn't
+    get one — that's a bug or a real conflict, not a no-op.
+
+    If `must_commit=False` and nothing was staged, returns
+    `(HEAD, False)`. This is the `triage_discard` path: the queue file
+    is typically gitignored, so deleting it produces no commit. The
+    caller's intent was always "remove from the queue"; no commit was
+    ever promised.
 
     Never uses `--no-verify`; hook failures propagate.
     """
@@ -162,9 +183,13 @@ def commit(
 
     add_paths(repo_root, paths)
     if not is_anything_staged(repo_root):
-        # No-op commit: nothing the write actually touched is tracked.
-        # Return HEAD so the caller has a stable SHA to record.
-        return head_sha(repo_root)
+        if must_commit:
+            raise NothingToCommit(
+                "commit() called with must_commit=True but no paths "
+                "ended up staged. The writer expected a commit; none "
+                "was produced (gitignored or untracked-deleted paths?)."
+            )
+        return head_sha(repo_root), False
 
     _run(
         repo_root,
@@ -178,7 +203,7 @@ def commit(
             message,
         ],
     )
-    return head_sha(repo_root)
+    return head_sha(repo_root), True
 
 
 def checkout_paths(repo_root: Path, paths: Iterable[Path]) -> None:

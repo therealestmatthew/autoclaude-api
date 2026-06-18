@@ -123,6 +123,7 @@ export interface WriteResponse {
   commit_sha: string;
   new_version: string;
   audit_id: string;
+  commit_created: boolean;
 }
 
 export interface TriageRequest {
@@ -140,6 +141,7 @@ export interface TriageResponse {
   commit_sha: string;
   new_version: string | null;
   audit_id: string;
+  commit_created: boolean;
 }
 
 export interface ProposalSummary {

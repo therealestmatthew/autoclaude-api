@@ -49,6 +49,7 @@ class WriteResult:
     path: str
     commit_sha: str
     new_version: str
+    commit_created: bool
 
 
 def _hash_text(text: str) -> str:
@@ -98,7 +99,12 @@ def edit_frontmatter(
         new_text = serialize.replace_frontmatter(current_text, frontmatter)
         fs.atomic_write(target, new_text)
         try:
-            sha = git.commit(repo_root, paths=[target], message=commit_message)
+            sha, created = git.commit(
+                repo_root,
+                paths=[target],
+                message=commit_message,
+                must_commit=True,
+            )
         except Exception:
             git.checkout_paths(repo_root, [target])
             raise
@@ -106,6 +112,7 @@ def edit_frontmatter(
             path=rel_path,
             commit_sha=sha,
             new_version=_hash_text(new_text),
+            commit_created=created,
         )
 
 
@@ -130,7 +137,12 @@ def edit_body(
         new_text = serialize.replace_body(current_text, body)
         fs.atomic_write(target, new_text)
         try:
-            sha = git.commit(repo_root, paths=[target], message=commit_message)
+            sha, created = git.commit(
+                repo_root,
+                paths=[target],
+                message=commit_message,
+                must_commit=True,
+            )
         except Exception:
             git.checkout_paths(repo_root, [target])
             raise
@@ -138,6 +150,7 @@ def edit_body(
             path=rel_path,
             commit_sha=sha,
             new_version=_hash_text(new_text),
+            commit_created=created,
         )
 
 
@@ -163,7 +176,12 @@ def edit_full(
         new_text = serialize.render_document(frontmatter, body)
         fs.atomic_write(target, new_text)
         try:
-            sha = git.commit(repo_root, paths=[target], message=commit_message)
+            sha, created = git.commit(
+                repo_root,
+                paths=[target],
+                message=commit_message,
+                must_commit=True,
+            )
         except Exception:
             git.checkout_paths(repo_root, [target])
             raise
@@ -171,6 +189,7 @@ def edit_full(
             path=rel_path,
             commit_sha=sha,
             new_version=_hash_text(new_text),
+            commit_created=created,
         )
 
 

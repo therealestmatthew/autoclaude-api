@@ -26,6 +26,7 @@ class TriageResult:
     target_path: str | None           # catalog file path on keep/merge
     commit_sha: str
     new_version: str | None           # version of the catalog file post-write
+    commit_created: bool              # True iff a new SHA was produced
 
 
 def _read(p: Path) -> str:
@@ -95,7 +96,12 @@ def triage_keep(
             or f"web: triage keep {stem} -> catalog/{chosen_slug}"
         )
         try:
-            sha = git.commit(repo_root, paths=[source, dest], message=message)
+            sha, created = git.commit(
+                repo_root,
+                paths=[source, dest],
+                message=message,
+                must_commit=True,
+            )
         except Exception:
             # Best-effort rollback: re-write the queue file and remove
             # the new catalog file. The audit log records what failed.
@@ -112,6 +118,7 @@ def triage_keep(
             target_path=dest_rel,
             commit_sha=sha,
             new_version=_hash_text(new_text),
+            commit_created=created,
         )
 
 
@@ -193,7 +200,12 @@ def triage_merge(
         fs.safe_delete(source, repo_root)
         message = commit_message or f"web: triage merge {Path(queue_rel).stem} -> {target_slug}"
         try:
-            sha = git.commit(repo_root, paths=[source, target], message=message)
+            sha, created = git.commit(
+                repo_root,
+                paths=[source, target],
+                message=message,
+                must_commit=True,
+            )
         except Exception:
             try:
                 fs.atomic_write(target, target_text)
@@ -208,6 +220,7 @@ def triage_merge(
             target_path=target_rel,
             commit_sha=sha,
             new_version=_hash_text(new_text),
+            commit_created=created,
         )
 
 
@@ -238,7 +251,12 @@ def triage_discard(
         fs.safe_delete(source, repo_root)
         message = commit_message or f"web: triage discard {Path(queue_rel).stem}"
         try:
-            sha = git.commit(repo_root, paths=[source], message=message)
+            sha, created = git.commit(
+                repo_root,
+                paths=[source],
+                message=message,
+                must_commit=False,
+            )
         except Exception:
             with contextlib.suppress(Exception):
                 fs.atomic_write(source, source_text)
@@ -249,4 +267,5 @@ def triage_discard(
             target_path=None,
             commit_sha=sha,
             new_version=None,
+            commit_created=created,
         )

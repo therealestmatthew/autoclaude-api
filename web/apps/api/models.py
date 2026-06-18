@@ -152,6 +152,7 @@ class WriteResponse(BaseModel):
     commit_sha: str
     new_version: str
     audit_id: str
+    commit_created: bool = True
 
 
 class TriageRequest(BaseModel):
@@ -175,6 +176,7 @@ class TriageResponse(BaseModel):
     commit_sha: str
     new_version: str | None
     audit_id: str
+    commit_created: bool = True
 
 
 # Proposals are 9.0's payload but the table lives behind 8.3.

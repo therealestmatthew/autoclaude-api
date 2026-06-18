@@ -159,9 +159,24 @@ def triage_queue(
                     status_code=409,
                     detail={"code": "dirty-tree", "message": str(e)},
                 ) from e
+            except FileExistsError as e:
+                # triage_keep against a slug whose catalog file already
+                # exists. The operator should either pick a different
+                # `target_slug` or use `merge`.
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "target-exists", "message": str(e)},
+                ) from e
+            except FileNotFoundError as e:
+                # triage_merge against a missing target slug.
+                raise HTTPException(
+                    status_code=404,
+                    detail={"code": "target-not-found", "message": str(e)},
+                ) from e
             audit.commit(
                 result={
                     "commit_sha": result.commit_sha,
+                    "commit_created": result.commit_created,
                     "target_path": result.target_path,
                 }
             )
@@ -175,6 +190,7 @@ def triage_queue(
             commit_sha=result.commit_sha,
             new_version=result.new_version,
             audit_id=audit.id,
+            commit_created=result.commit_created,
         )
     finally:
         session.close()
@@ -229,13 +245,19 @@ def _edit_full(
                     status_code=409,
                     detail={"code": "dirty-tree", "message": str(e)},
                 ) from e
-            audit.commit(result={"commit_sha": result.commit_sha})
+            audit.commit(
+                result={
+                    "commit_sha": result.commit_sha,
+                    "commit_created": result.commit_created,
+                }
+            )
         index.sync()
         return WriteResponse(
             path=result.path,
             commit_sha=result.commit_sha,
             new_version=result.new_version,
             audit_id=audit.id,
+            commit_created=result.commit_created,
         )
     finally:
         session.close()
@@ -284,13 +306,19 @@ def _edit_frontmatter(
                     status_code=409,
                     detail={"code": "dirty-tree", "message": str(e)},
                 ) from e
-            audit.commit(result={"commit_sha": result.commit_sha})
+            audit.commit(
+                result={
+                    "commit_sha": result.commit_sha,
+                    "commit_created": result.commit_created,
+                }
+            )
         index.sync()
         return WriteResponse(
             path=result.path,
             commit_sha=result.commit_sha,
             new_version=result.new_version,
             audit_id=audit.id,
+            commit_created=result.commit_created,
         )
     finally:
         session.close()
@@ -339,13 +367,19 @@ def _edit_body(
                     status_code=409,
                     detail={"code": "dirty-tree", "message": str(e)},
                 ) from e
-            audit.commit(result={"commit_sha": result.commit_sha})
+            audit.commit(
+                result={
+                    "commit_sha": result.commit_sha,
+                    "commit_created": result.commit_created,
+                }
+            )
         index.sync()
         return WriteResponse(
             path=result.path,
             commit_sha=result.commit_sha,
             new_version=result.new_version,
             audit_id=audit.id,
+            commit_created=result.commit_created,
         )
     finally:
         session.close()

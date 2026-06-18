@@ -2,18 +2,23 @@
 name: phase-8-3-hardening
 title: "Phase 8.3 — hardening + extended dogfood"
 phase: 8
-status: draft
+status: done
 created_at: 2026-06-17
 updated_at: 2026-06-17
-completed_at:
+completed_at: 2026-06-17
 supersedes: []
 superseded_by:
 related:
   - phase-8-web-command-center
   - phase-8-3-write-back
   - phase-8-3-dogfood-findings
+  - phase-8-3-hardening-findings
   - phase-9-0-reviewer-agent
-locked_decisions: []
+locked_decisions:
+  - "`git.commit()` returns `(sha, commit_created)`; `must_commit=True` is the default. `triage_discard` is the only writer that passes `must_commit=False`."
+  - "Every write-back response and audit `result` blob carries `commit_created: bool`. Reviewers (operator or agent) read it to tell intentional no-ops apart from silent failures."
+  - "Triage routing translates `FileExistsError` → 409 `target-exists` and `FileNotFoundError` → 404 `target-not-found`."
+  - "Next session goes 8.3b frontend (operator UI). The curl loop works but slug munging + lack of diff preview are the gating friction — see findings."
 ---
 
 # Phase 8.3 hardening — close the correctness gap + extend the dogfood
