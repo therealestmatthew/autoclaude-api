@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -108,16 +109,25 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        def _status(msg: str) -> None:
+            print(f"  {msg}", file=sys.stderr, flush=True)
+
+        if cfg.auto_migrate:
+            _status("migrating database …")
         _maybe_migrate(cfg)
-        # Drive an initial sync so the first request doesn't pay a cold walk.
-        # `index.sync()` is idempotent so this is cheap on a warm DB.
+        _status("syncing index …")
         try:
-            await asyncio.to_thread(_scoped_index().sync)
+            result = await asyncio.to_thread(_scoped_index().sync)
+            _status(
+                f"index ready — {result.records} records "
+                f"({result.rows_written} written, {result.rows_skipped} skipped)"
+            )
         except Exception:  # noqa: BLE001
-            logger.exception("initial sync failed; continuing without it")
+            logger.exception("autoclaude: initial sync failed; continuing without it")
         task = asyncio.create_task(
             _reconciler_loop(_scoped_index(), cfg.reconcile_interval)
         )
+        _status(f"reconciler every {cfg.reconcile_interval:.0f}s — ready\n")
         try:
             yield
         finally:
@@ -137,7 +147,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cfg.cors_origins),
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT"],
         allow_headers=["*"],
         allow_credentials=False,
     )
@@ -172,7 +182,18 @@ def serve() -> None:
     """Console-script entry point. Reads settings, calls uvicorn.run()."""
     import uvicorn
 
+    from .db import resolve_dsn
+
     cfg = get_settings()
+    dsn = cfg.index_dsn or resolve_dsn(cfg.repo_root)
+    db_display = dsn.removeprefix("sqlite:///") if dsn.startswith("sqlite:///") else dsn
+
+    print("\n  autoclaude API", file=sys.stderr, flush=True)
+    print(f"  URL    http://{cfg.host}:{cfg.port}", file=sys.stderr, flush=True)
+    print(f"  repo   {cfg.repo_root}", file=sys.stderr, flush=True)
+    print(f"  db     {db_display}", file=sys.stderr, flush=True)
+    print(f"  log    {cfg.log_level}\n", file=sys.stderr, flush=True)
+
     uvicorn.run(
         "web.apps.api.main:app",
         host=cfg.host,

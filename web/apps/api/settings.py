@@ -44,10 +44,11 @@ class Settings:
             os.environ.get("AUTOCLAUDE_REPO_ROOT", str(_repo_root_default()))
         ).resolve()
         host = os.environ.get("AUTOCLAUDE_API_HOST", "127.0.0.1")
-        port = int(os.environ.get("AUTOCLAUDE_API_PORT", "8000"))
+        port = int(os.environ.get("AUTOCLAUDE_API_PORT", "8080"))
         origins_env = os.environ.get(
             "AUTOCLAUDE_API_CORS_ORIGINS",
-            "http://localhost:3000,http://127.0.0.1:3000",
+            "http://localhost:3000,http://127.0.0.1:3000,"
+            "http://localhost:3001,http://127.0.0.1:3001",
         )
         cors_origins = tuple(o.strip() for o in origins_env.split(",") if o.strip())
         log_level = os.environ.get("AUTOCLAUDE_API_LOG_LEVEL", "info")

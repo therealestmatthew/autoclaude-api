@@ -4,7 +4,7 @@
   "private": true,
   "description": "Operator UI for the autoclaude command center.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "echo '\n  autoclaude web  →  http://localhost:3001\n  API backend    →  http://localhost:8080\n' && next dev --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
