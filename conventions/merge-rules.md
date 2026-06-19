@@ -46,12 +46,37 @@ For each queue candidate:
 
 These are guidance, not rules. When in doubt, propose merge and let the human decide. False positives waste a minute; false negatives create duplicates that pollute the catalog forever.
 
-## What humans always own (Phase 0)
+## What humans always own (Phase 0+)
 
-- Final decision on merge vs new vs discard.
+- **Final approval of every triage action.** The reviewer agent (Phase 9.0) proposes
+  keep/merge/discard; the operator accepts or rejects via the 8.3 proposals UI.
+  The agent NEVER writes to `/catalog/` or `/scout/queue/` directly.
 - The body text — the *why we kept it* notes.
 - The `quality:` score.
 - Setting `status: adopted` (means we actually use this).
+
+## Phase 9.0 reviewer agent — proposal workflow
+
+The Phase 9.0 reviewer generates proposals from queue candidates using Claude
+(Sonnet 4.6 by default, Opus 4.7 on low-confidence escalation). Proposals appear
+in the `pending` state in the 8.3 proposals table and are visible in the web UI at
+`/proposals`.
+
+The reviewer:
+- Applies this decision tree, biasing toward `discard` for transient news,
+  low-content reactions, and items with no load-bearing claim.
+- Proposes `merge` when an existing catalog slug is the clear target. The operator
+  must confirm the merge target before the triage runs.
+- Proposes `keep` with an optional `suggested_slug` (cleaner slug than the
+  scout-extracted one).
+- Groups parent-child sets atomically: one review call per parent, proposals written
+  for the parent AND each queue child.
+
+Operator workflow:
+1. Run `uv run scout review --dry-run --limit 10 -v` to preview decisions.
+2. Run `uv run scout review --limit 50` to generate pending proposals.
+3. Open `/proposals` in the web UI; accept or reject each with a note.
+4. Accepted proposals run the standard triage pipeline (same as manual triage).
 
 ## What automation can own (later phases)
 

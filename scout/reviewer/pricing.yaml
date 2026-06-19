@@ -1,0 +1,14 @@
+# Anthropic model pricing — USD per million tokens.
+# Manually maintained; update when prices change.
+# Source: https://www.anthropic.com/pricing (checked 2026-06-19)
+models:
+  claude-sonnet-4-6:
+    input:       3.00
+    output:      15.00
+    cache_write: 3.75
+    cache_read:  0.30
+  claude-opus-4-7:
+    input:       15.00
+    output:      75.00
+    cache_write: 18.75
+    cache_read:  1.50

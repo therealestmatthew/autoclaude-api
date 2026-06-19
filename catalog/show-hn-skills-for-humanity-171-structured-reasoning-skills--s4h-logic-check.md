@@ -17,7 +17,7 @@ discovered:
 scout:
   raw_url: https://github.com/human-avatar/skills-for-humanity
 created_at: '2026-06-15'
-updated_at: '2026-06-17'
+updated_at: '2026-06-19'
 relations:
   parent: show-hn-skills-for-humanity-171-structured-reasoning-skills
 fingerprint: sha256:9aad558d5976877aefa3d4db5b7e8d5eb6559a11776e84a1eed87f838e92f3aa

@@ -118,6 +118,10 @@ uv run ruff check scout/ web/ tests/ --fix # autofix safe issues
 uv run autoclaude-api                     # FastAPI backend for the web UI on :8000
 ( cd web/apps/web && npm run dev )        # Next.js frontend on :3000 (requires `npm install` first)
 
+uv run scout review --dry-run             # reviewer agent: preview decisions (no writes; no API key spend)
+uv run scout review --limit 25            # reviewer agent: generate pending proposals (API key + API server required)
+uv run scout review --evals               # eval harness: score against golden set (API key required)
+
 uv run autoclaude-index sync              # populate / refresh the persistent index (SQLite default at web/.data/index.sqlite)
 uv run autoclaude-index status            # show current sync state
 uv run autoclaude-index upgrade           # alembic upgrade head; rarely needed (API auto-migrates on boot)
@@ -174,7 +178,8 @@ When adding a new test, follow `/conventions/testing.md` for which directory it 
 - **Phase 6:** automated merge/dedup decisioning.
 - **Phase 7 (done):** command-center observability (token burn, threads).
 - **Phase 8 (active):** web command center — operator UI over the catalog, queue, threads, engagements. See `/docs/plans/phase-8-web-command-center.md`.
-- **Phase 9+:** consulting buildout.
+- **Phase 9.0 (active):** reviewer agent — LLM-driven keep/merge/discard proposals for queue candidates. See `/docs/plans/phase-9-0-reviewer-agent.md`.
+- **Phase 9+:** consulting buildout; semantic-search context (pgvector); cloud deploy.
 
 ## Planning lineage
 

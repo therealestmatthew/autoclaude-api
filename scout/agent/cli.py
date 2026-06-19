@@ -17,6 +17,13 @@
   scout report --week             # last 7 days
   scout report --since <date>     # custom range
   scout report --write            # also write to /command-center/token-burn/reports/
+  scout review                    # LLM reviewer: propose keep/merge/discard for queue
+  scout review --dry-run          # log decisions; don't write proposals
+  scout review --slug <slug>...   # review specific candidates
+  scout review --limit 25         # cap per invocation
+  scout review --budget 5.00      # override daily budget cap
+  scout review --model opus       # force Opus 4.7 (default: Sonnet 4.6)
+  scout review --evals            # run the eval harness over the golden set
   scout doctor                    # catalog integrity checks
   scout doctor --json             # machine-readable
   scout doctor --fix              # auto-fix slug↔filename mismatches only
@@ -35,6 +42,7 @@ from ..doctor import run_checks
 from ..liveness import check_urls_once
 from ..liveness.check import LIVENESS_STATE_FILENAME
 from ..report import aggregate, render
+from ..reviewer.cli import add_review_subparser, handle_review
 from .runner import (
     CATALOG_DIR,
     STATE_DIR,
@@ -131,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
         "--write", action="store_true",
         help="Also write the report to /command-center/token-burn/reports/.",
     )
+
+    add_review_subparser(sub)
 
     doc_p = sub.add_parser(
         "doctor",
@@ -243,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
             (REPORTS_DIR / fname).write_text(md)
             print(f"\n[wrote {REPORTS_DIR / fname}]", file=sys.stderr)
         return 0
+
+    if args.cmd == "review":
+        return handle_review(args)
 
     if args.cmd == "doctor":
         report = run_checks(CATALOG_DIR, QUEUE_DIR, fix=args.fix)

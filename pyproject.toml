@@ -39,12 +39,18 @@ dev = [
   # engine and migrations, so dev needs them as well as `web`.
   "sqlalchemy>=2.0",
   "alembic>=1.13",
+  "anthropic>=0.40",
 ]
 web = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.32",
   "sqlalchemy>=2.0",
   "alembic>=1.13",
+]
+# Phase 9.0 reviewer agent. Install with: uv sync --group reviewer
+# Headless scout runs and web-only deploys don't need this group.
+reviewer = [
+  "anthropic>=0.40",
 ]
 
 [build-system]
@@ -56,6 +62,7 @@ packages = [
   "scout",
   "scout.agent",
   "scout.extractors",
+  "scout.reviewer",
   "tools",
   "web",
   "web.apps",
@@ -82,7 +89,7 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 # B008: `Depends(...)` / `Query(...)` in argument defaults is the canonical
 # FastAPI route signature. Suppressing here is preferable to littering route
 # handlers with `# noqa: B008`.
-ignore = ["B008"]
+ignore = ["B008", "SIM117"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
