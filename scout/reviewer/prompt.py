@@ -18,7 +18,7 @@ _MERGE_RULES: str = _MERGE_RULES_PATH.read_text()
 _ASSET_SCHEMA: str = _SCHEMA_PATH.read_text()
 
 _SYSTEM_TEXT = """\
-You are the reviewer for the autoclaude catalog. Your job is to triage each \
+You are the reviewer for the ft-autoclaude catalog. Your job is to triage each \
 queue candidate and propose one of three actions: keep, merge, or discard.
 
 Guidelines:

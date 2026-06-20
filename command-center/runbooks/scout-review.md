@@ -17,7 +17,7 @@ rejects them via the web UI (`/proposals`). The agent never writes to `/catalog/
 
 2. **API server running** for the live run (not needed for `--dry-run`):
    ```sh
-   uv run autoclaude-api
+   uv run ft-autoclaude-api
    ```
 
 3. **Reviewer deps installed**:
@@ -53,7 +53,7 @@ uv run scout review --budget 10.00 --limit 50
 
 Override persistently via env var:
 ```sh
-export AUTOCLAUDE_REVIEWER_DAILY_BUDGET=10.00
+export FT_AUTOCLAUDE_REVIEWER_DAILY_BUDGET=10.00
 ```
 
 When the cap is hit the runner stops cleanly (exit 0). Check the rollup:

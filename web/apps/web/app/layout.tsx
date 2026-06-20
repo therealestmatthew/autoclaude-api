@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
-  title: "autoclaude · command center",
+  title: "FT-AutoClaude · command center",
   description:
-    "Operator UI for the autoclaude consulting & agentic-delivery practice.",
+    "Operator UI for FT-AutoClaude — an Agentic Solutions Marketplace for Finance Transformation consulting.",
 };
 
 export default function RootLayout({

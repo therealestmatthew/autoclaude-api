@@ -31,7 +31,7 @@ class LobstersExtractor:
         self._client = client or httpx.Client(
             timeout=httpx.Timeout(30.0),
             follow_redirects=True,
-            headers={"User-Agent": "autoclaude-scout/0.1.0"},
+            headers={"User-Agent": "ft-autoclaude-scout/0.1.0"},
         )
 
     def fetch(

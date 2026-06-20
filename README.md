@@ -1,6 +1,6 @@
-# autoclaude
+# FT-AutoClaude
 
-Command and control center for a consulting & software-delivery business built on agentic systems.
+**An Agentic Solutions Marketplace for Finance Transformation consulting.** A private hard-fork of the open-source `autoclaude` command-and-control center, retargeted for a Finance Transformation consulting practice.
 
 This repo consolidates the assets, conventions, and operations that turn solo delivery into a leveraged, repeatable practice. Two halves live here:
 

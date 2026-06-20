@@ -12,7 +12,7 @@ export async function ApiBanner() {
     return (
       <div className="border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-900 text-rose-800 dark:text-rose-200 px-4 py-3 rounded-md text-sm">
         <strong>API unreachable</strong> at <code>{api.base}</code>. Start it
-        with <code>uv run autoclaude-api</code>.
+        with <code>uv run ft-autoclaude-api</code>.
       </div>
     );
   }

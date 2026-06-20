@@ -51,5 +51,5 @@ updated_at: 2026-06-14
 ## Relationship to other areas
 
 - A methodology may reference a `/claude/playbooks/` doc for the technical delivery step (e.g., `delivery.md` § Build references `greenfield-feature-delivery` playbook).
-- A methodology lists which `/consulting/templates/` it uses at each phase.
+- A methodology lists which `/consulting/methodologies/templates/` it uses at each phase.
 - The methodology stays *generic* — engagement-specific tailoring lives in `/consulting/engagements/<year>-<client>/methodology.md` (copied from here and adapted).

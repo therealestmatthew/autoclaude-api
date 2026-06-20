@@ -57,7 +57,7 @@ QUEUE_DIR = Path(__file__).resolve().parents[2] / "scout" / "queue"
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="scout", description="autoclaude scout agent")
+    parser = argparse.ArgumentParser(prog="scout", description="ft-autoclaude scout agent")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     run_p = sub.add_parser("run", help="Run the scout once over enabled sources.")

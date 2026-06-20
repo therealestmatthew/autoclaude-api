@@ -1,8 +1,8 @@
 """Engine + session factory + DSN resolution.
 
 The DSN defaults to SQLite at `web/.data/index.sqlite` under the configured
-repo root. `AUTOCLAUDE_INDEX_DSN` overrides it. The parent directory is
-auto-created so a fresh checkout's first `autoclaude-index sync` works
+repo root. `FT_AUTOCLAUDE_INDEX_DSN` overrides it. The parent directory is
+auto-created so a fresh checkout's first `ft-autoclaude-index sync` works
 without manual setup.
 """
 
@@ -26,7 +26,7 @@ def resolve_dsn(repo_root: Path, *, env: dict[str, str] | None = None) -> str:
 
     Priority:
 
-    1. `AUTOCLAUDE_INDEX_DSN` env var if set and non-empty.
+    1. `FT_AUTOCLAUDE_INDEX_DSN` env var if set and non-empty.
     2. `sqlite:///<repo_root>/web/.data/index.sqlite`.
 
     For the SQLite default, the parent directory is created if absent.
@@ -34,7 +34,7 @@ def resolve_dsn(repo_root: Path, *, env: dict[str, str] | None = None) -> str:
     reachable; we don't try to mkdir an arbitrary path.
     """
     env = env if env is not None else dict(os.environ)
-    override = env.get("AUTOCLAUDE_INDEX_DSN", "").strip()
+    override = env.get("FT_AUTOCLAUDE_INDEX_DSN", "").strip()
     if override:
         return override
 

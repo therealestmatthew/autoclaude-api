@@ -1,10 +1,10 @@
 {
-  "name": "autoclaude-web",
+  "name": "ft-autoclaude-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Operator UI for the autoclaude command center.",
+  "description": "Operator UI for FT-AutoClaude — an Agentic Solutions Marketplace for Finance Transformation.",
   "scripts": {
-    "dev": "echo '\n  autoclaude web  →  http://localhost:3001\n  API backend    →  http://localhost:8080\n' && next dev --port 3001",
+    "dev": "echo '\n  FT-AutoClaude web  →  http://localhost:3001\n  API backend         →  http://localhost:8080\n' && next dev --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

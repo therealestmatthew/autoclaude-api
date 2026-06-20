@@ -35,7 +35,7 @@
 - **/claude/**: (skills, agents, prompts, playbooks to add or update)
 - **/catalog/**: (assets to log)
 - **/consulting/methodologies/**: (changes to methodology)
-- **/consulting/templates/**: (template improvements)
+- **/consulting/methodologies/templates/**: (template improvements)
 - **/consulting/case-studies/**: (worth writing one? Y/N + why)
 
 ## Client feedback

@@ -1,7 +1,7 @@
 [project]
-name = "autoclaude"
+name = "ft_autoclaude"
 version = "0.1.0"
-description = "Command and control center for an agentic consulting & software-delivery practice."
+description = "FT-AutoClaude — an Agentic Solutions Marketplace for Finance Transformation consulting."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
@@ -17,8 +17,8 @@ dependencies = [
 [project.scripts]
 scout = "scout.agent.cli:main"
 manifest = "tools.manifest:main"
-autoclaude-api = "tools.web:main"
-autoclaude-index = "tools.index:main"
+ft-autoclaude-api = "tools.web:main"
+ft-autoclaude-index = "tools.index:main"
 
 # PEP 735 dependency groups. `uv sync` installs the runtime deps + the `dev`
 # group by default; `uv sync --no-dev` skips the group for a slim runtime

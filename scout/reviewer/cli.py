@@ -43,7 +43,7 @@ def add_review_subparser(sub: argparse._SubParsersAction) -> None:  # type: igno
         metavar="USD",
         help=(
             "Override the daily budget cap in USD. "
-            "Default: AUTOCLAUDE_REVIEWER_DAILY_BUDGET env var or $5.00."
+            "Default: FT_AUTOCLAUDE_REVIEWER_DAILY_BUDGET env var or $5.00."
         ),
     )
     p.add_argument(
@@ -64,7 +64,7 @@ def add_review_subparser(sub: argparse._SubParsersAction) -> None:  # type: igno
         "--api-url",
         default=None,
         metavar="URL",
-        help="Base URL of the autoclaude API (default: http://localhost:8000).",
+        help="Base URL of the ft-autoclaude API (default: http://localhost:8000).",
     )
     p.add_argument(
         "--evals",

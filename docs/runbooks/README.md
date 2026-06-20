@@ -1,6 +1,6 @@
 # /docs/runbooks/
 
-User-facing runbooks: how to *use* the autoclaude program in day-to-day work.
+User-facing runbooks: how to *use* FT-AutoClaude in day-to-day work.
 
 This is a different audience from [/command-center/runbooks/](../../command-center/runbooks/), which holds operator runbooks for the system itself (rotate credentials, restore state, investigate failed extractions). If a procedure is about *running the program to get a result*, it belongs here. If it's about *keeping the program healthy*, it belongs in command-center.
 

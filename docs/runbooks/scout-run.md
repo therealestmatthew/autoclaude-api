@@ -339,7 +339,7 @@ Most days the strict keyword filter (`claude code`, `claude-code`,
 `/t/ai.rss` or `/t/programming.rss`. This is the source being low-volume,
 not a bug.
 
-**Verify.** `curl -s -A "autoclaude-scout/0.1.0" https://lobste.rs/t/ai.rss
+**Verify.** `curl -s -A "ft-autoclaude-scout/0.1.0" https://lobste.rs/t/ai.rss
 | grep -oE '<title>[^<]*</title>' | head -20` lists current titles. If none
 of them contain a keyword from `scout/sources/lobsters.yaml`, queue=0 is
 correct.

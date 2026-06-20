@@ -1,12 +1,12 @@
-"""Entry point for `uv run autoclaude-index`.
+"""Entry point for `uv run ft-autoclaude-index`.
 
 Subcommands:
 
-    autoclaude-index sync                # walk repo, drain into DB
-    autoclaude-index sync --verbose
-    autoclaude-index status              # print IndexMeta + counts
-    autoclaude-index upgrade             # alembic upgrade head
-    autoclaude-index reset [--yes]       # drop tables + upgrade + sync
+    ft-autoclaude-index sync                # walk repo, drain into DB
+    ft-autoclaude-index sync --verbose
+    ft-autoclaude-index status              # print IndexMeta + counts
+    ft-autoclaude-index upgrade             # alembic upgrade head
+    ft-autoclaude-index reset [--yes]       # drop tables + upgrade + sync
 """
 
 from __future__ import annotations
@@ -70,9 +70,9 @@ def _cmd_status(args: argparse.Namespace) -> int:
         meta = session.get(IndexMeta, 1)
         count = session.execute(select(Asset)).scalars().all()
     if meta is None:
-        print("no sync has run yet — try `autoclaude-index sync`", file=sys.stderr)
+        print("no sync has run yet — try `ft-autoclaude-index sync`", file=sys.stderr)
         return 0
-    print("autoclaude index status", file=sys.stderr)
+    print("ft-autoclaude index status", file=sys.stderr)
     print(f"  dsn               {dsn}", file=sys.stderr)
     print(f"  repo_root         {meta.repo_root}", file=sys.stderr)
     print(f"  schema_version    {meta.schema_version}", file=sys.stderr)
@@ -115,8 +115,8 @@ def _format_sync_result(result: SyncResult) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="autoclaude-index",
-        description="Persistent index for the autoclaude web command center.",
+        prog="ft-autoclaude-index",
+        description="Persistent index for the FT-AutoClaude web command center.",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 

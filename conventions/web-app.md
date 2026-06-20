@@ -30,7 +30,7 @@ The backend (`/web/apps/api/`) and frontend (`/web/apps/web/`) deploy independen
 - A new surface adds an API endpoint **and** a frontend page — never one without the other.
 - Cross-cutting concerns (auth, logging, telemetry) live on the backend; the frontend is intentionally thin.
 
-## 3. The Python backend is part of the `autoclaude` package
+## 3. The Python backend is part of the `ft_autoclaude` project
 
 `web/apps/api/` is Python code. It uses the existing venv, the existing pyproject, the existing ruff config. It is not a separate package.
 

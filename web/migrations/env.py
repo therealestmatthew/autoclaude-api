@@ -1,4 +1,4 @@
-"""Alembic env.py for the autoclaude web persistent index.
+"""Alembic env.py for the ft-autoclaude web persistent index.
 
 Supports offline (`alembic upgrade --sql`) and online runs. The DSN is
 injected via `config.set_main_option("sqlalchemy.url", ...)` by the CLI
@@ -35,12 +35,12 @@ def _dsn() -> str:
     """Resolve a DSN for the migration run."""
     if (cli_url := config.get_main_option("sqlalchemy.url")):
         return cli_url
-    env_url = os.environ.get("AUTOCLAUDE_INDEX_DSN", "").strip()
+    env_url = os.environ.get("FT_AUTOCLAUDE_INDEX_DSN", "").strip()
     if env_url:
         return env_url
     raise RuntimeError(
         "alembic env: no DSN provided. Set sqlalchemy.url in alembic.ini, "
-        "AUTOCLAUDE_INDEX_DSN, or call via autoclaude-index."
+        "FT_AUTOCLAUDE_INDEX_DSN, or call via ft-autoclaude-index."
     )
 
 

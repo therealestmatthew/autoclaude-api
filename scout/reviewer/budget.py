@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 _PRICING_PATH = Path(__file__).resolve().parent / "pricing.yaml"
 _THREADS_DIR = REPO_ROOT / "command-center" / "threads"
 
-DEFAULT_CAP_USD: float = float(os.environ.get("AUTOCLAUDE_REVIEWER_DAILY_BUDGET", "5.00"))
+DEFAULT_CAP_USD: float = float(os.environ.get("FT_AUTOCLAUDE_REVIEWER_DAILY_BUDGET", "5.00"))
 _WARN_FRACTION = 0.80
 
 

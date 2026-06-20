@@ -48,7 +48,7 @@ Different document types extend the minimum with their own fields. Each type has
 | Scout queue candidate        | (subset of catalog asset)                      | `kind`, `source`, `discovered` — `status: draft` implicit                    |
 | Engagement folder root       | (see below)                                    | `client`, `started_on`, `ended_on`, `sow_url`, `primary_contact`             |
 | Methodology                  | `/consulting/methodologies/README.md`          | `applies_to.engagement_types`, `version`                                     |
-| Template                     | `/consulting/templates/README.md`              | `placeholders`, `version`, `publish`, `applies_to.engagement_types`          |
+| Template                     | `/consulting/methodologies/templates/README.md`              | `placeholders`, `version`, `publish`, `applies_to.engagement_types`          |
 | Plan                         | `/docs/plans/README.md`                        | `phase`, `completed_at`, `supersedes`, `superseded_by`, `locked_decisions`   |
 | Session prompt               | `/docs/plans/README.md`                        | sibling of a plan; `kind: session-prompt`; `status` flips to `done` when archived as `.done.md` |
 | Runbook                      | `/command-center/runbooks/README.md` / `/docs/runbooks/README.md` | `when_to_run`, `last_used`, `last_verified`              |
@@ -124,6 +124,14 @@ notes: >
 ```
 
 Sidecars carry the same minimum fields as in-file frontmatter, plus whatever per-type fields apply. The scanner treats a binary document with **no** sidecar as missing-frontmatter and lists it for backfill.
+
+### Exception: brand asset binaries (Phase 10.1+)
+
+Brand asset binaries under `/brands/<slug>/` — `logo-*.png`, `logo-*.svg`, `*.potx`, `*.dotx`, `fonts/*.ttf`, and any other file referenced from the brand's `brand.md` frontmatter — are **exempt** from the `.meta.yaml` sidecar requirement.
+
+The `brand.md` itself is the manifest for its siblings. Each binary referenced from brand frontmatter (`logo_full`, `logo_mono`, `pptx_master`, `docx_master`, entries in `fonts:`, etc.) is treated as a covered companion by the manifest scanner. Sidecars would duplicate information already captured in the brand asset.
+
+This exception applies *only* to brand-companion binaries inside a `/brands/<slug>/` directory. Binaries elsewhere (decks under `/consulting/engagements/.../deliverables/`, generated exports outside the brand dir, etc.) still require sidecars.
 
 ## Catalog asset — full spec
 

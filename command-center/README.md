@@ -53,7 +53,7 @@ agents do work    →    they emit thread events    →    /command-center/threa
 
 ## What goes in runbooks vs methodologies vs playbooks
 
-- **`/command-center/runbooks/`** — how to operate *the autoclaude system itself*.
+- **`/command-center/runbooks/`** — how to operate *the FT-AutoClaude system itself*.
 - **`/consulting/methodologies/`** — how to run *consulting engagements*.
 - **`/claude/playbooks/`** — how to *deliver technical work* with the agentic toolkit.
 

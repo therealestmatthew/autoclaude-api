@@ -67,7 +67,7 @@ def resolve_author(repo_root: Path) -> tuple[str, str]:
     """Pick the git author identity for write-back commits.
 
     Priority:
-    1. `AUTOCLAUDE_GIT_AUTHOR_NAME` / `_EMAIL` env vars (operator
+    1. `FT_AUTOCLAUDE_GIT_AUTHOR_NAME` / `_EMAIL` env vars (operator
        override).
     2. `git config user.name` / `user.email` (matches operator's
        existing identity).
@@ -75,8 +75,8 @@ def resolve_author(repo_root: Path) -> tuple[str, str]:
     Refuses to fall through to a synthetic default — an unidentified
     commit is a footgun.
     """
-    name = os.environ.get("AUTOCLAUDE_GIT_AUTHOR_NAME", "").strip()
-    email = os.environ.get("AUTOCLAUDE_GIT_AUTHOR_EMAIL", "").strip()
+    name = os.environ.get("FT_AUTOCLAUDE_GIT_AUTHOR_NAME", "").strip()
+    email = os.environ.get("FT_AUTOCLAUDE_GIT_AUTHOR_EMAIL", "").strip()
     if not name:
         try:
             name = _run(repo_root, ["config", "user.name"]).strip()
@@ -87,7 +87,7 @@ def resolve_author(repo_root: Path) -> tuple[str, str]:
                 stdout=e.stdout,
                 stderr=(
                     "no git author name configured; "
-                    "set AUTOCLAUDE_GIT_AUTHOR_NAME or git config user.name"
+                    "set FT_AUTOCLAUDE_GIT_AUTHOR_NAME or git config user.name"
                 ),
             ) from e
     if not email:
@@ -100,7 +100,7 @@ def resolve_author(repo_root: Path) -> tuple[str, str]:
                 stdout=e.stdout,
                 stderr=(
                     "no git author email configured; "
-                    "set AUTOCLAUDE_GIT_AUTHOR_EMAIL or git config user.email"
+                    "set FT_AUTOCLAUDE_GIT_AUTHOR_EMAIL or git config user.email"
                 ),
             ) from e
     return name, email

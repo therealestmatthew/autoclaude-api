@@ -1,12 +1,12 @@
 """FastAPI app factory + entry point.
 
-`uv run autoclaude-api` calls `serve()` below. Tests build an app via
+`uv run ft-autoclaude-api` calls `serve()` below. Tests build an app via
 `create_app(repo_root=...)` and use FastAPI's TestClient.
 
 8.2: the app boots with a DB-backed `CachedIndex`. On startup it (optionally)
 runs `alembic upgrade head` and then drives an initial sync so the first
 request doesn't pay a cold-walk penalty. A polling reconciler runs every
-`AUTOCLAUDE_INDEX_RECONCILE_INTERVAL` seconds while the app is up; setting
+`FT_AUTOCLAUDE_INDEX_RECONCILE_INTERVAL` seconds while the app is up; setting
 the interval to `0` disables the loop (useful in tests).
 """
 
@@ -79,7 +79,7 @@ async def _reconciler_loop(index: CachedIndex, interval: float) -> None:
 
 
 def _maybe_migrate(cfg: Settings) -> None:
-    """If `AUTOCLAUDE_INDEX_AUTO_MIGRATE` is on, run `alembic upgrade head`."""
+    """If `FT_AUTOCLAUDE_INDEX_AUTO_MIGRATE` is on, run `alembic upgrade head`."""
     if not cfg.auto_migrate:
         return
     dsn = cfg.index_dsn or resolve_dsn(cfg.repo_root)
@@ -123,7 +123,7 @@ def create_app(
                 f"({result.rows_written} written, {result.rows_skipped} skipped)"
             )
         except Exception:  # noqa: BLE001
-            logger.exception("autoclaude: initial sync failed; continuing without it")
+            logger.exception("ft-autoclaude: initial sync failed; continuing without it")
         task = asyncio.create_task(
             _reconciler_loop(_scoped_index(), cfg.reconcile_interval)
         )
@@ -135,12 +135,12 @@ def create_app(
             await asyncio.gather(task, return_exceptions=True)
 
     app = FastAPI(
-        title="autoclaude web command center",
+        title="FT-AutoClaude web command center",
         version=stats.API_VERSION,
         description=(
-            "Read-only view over the autoclaude repo. "
+            "Read-only view over the FT-AutoClaude repo. "
             "Markdown is canonical; this API is a derived index. "
-            "See /docs/plans/phase-8-web-command-center.md."
+            "See /docs/plans/company-edition.md for the Phase 10 pivot."
         ),
         lifespan=lifespan,
     )
@@ -188,7 +188,7 @@ def serve() -> None:
     dsn = cfg.index_dsn or resolve_dsn(cfg.repo_root)
     db_display = dsn.removeprefix("sqlite:///") if dsn.startswith("sqlite:///") else dsn
 
-    print("\n  autoclaude API", file=sys.stderr, flush=True)
+    print("\n  FT-AutoClaude API", file=sys.stderr, flush=True)
     print(f"  URL    http://{cfg.host}:{cfg.port}", file=sys.stderr, flush=True)
     print(f"  repo   {cfg.repo_root}", file=sys.stderr, flush=True)
     print(f"  db     {db_display}", file=sys.stderr, flush=True)

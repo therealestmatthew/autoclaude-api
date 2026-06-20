@@ -1,6 +1,6 @@
 # /command-center/runbooks/
 
-How to operate the autoclaude system itself. Each runbook is a markdown document with a specific procedure that should be followable cold.
+How to operate the FT-AutoClaude system itself. Each runbook is a markdown document with a specific procedure that should be followable cold.
 
 ## Style
 

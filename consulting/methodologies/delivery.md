@@ -16,9 +16,9 @@ updated_at: 2026-06-14
 ## Phases
 
 1. **Sprint zero.** Discovery, scoping, environment setup. Output: a scoped statement of work + a working dev loop. Reference `/claude/playbooks/` for the technical setup steps.
-2. **Build.** Time-boxed iterations with weekly status (`/consulting/templates/status-report.md`). Demo at end of each iteration.
+2. **Build.** Time-boxed iterations with weekly status (`/consulting/methodologies/templates/status-report.md`). Demo at end of each iteration.
 3. **Stabilize.** Bug-fix, polish, documentation, handover.
-4. **Close.** Retro (`/consulting/templates/retro.md`), case study (optional), invoice reconciliation.
+4. **Close.** Retro (`/consulting/methodologies/templates/retro.md`), case study (optional), invoice reconciliation.
 
 ## What separates this from "agile delivery"
 
@@ -30,9 +30,9 @@ updated_at: 2026-06-14
 
 | Touchpoint        | Default cadence | Template                                        |
 | ----------------- | --------------- | ----------------------------------------------- |
-| Status report     | Weekly          | `/consulting/templates/status-report.md`        |
+| Status report     | Weekly          | `/consulting/methodologies/templates/status-report.md`        |
 | Demo              | Bi-weekly       | (no template yet)                               |
-| Retro             | End of phase    | `/consulting/templates/retro.md`                |
+| Retro             | End of phase    | `/consulting/methodologies/templates/retro.md`                |
 | Invoice           | Per SOW         | (no template yet)                               |
 
 ## Adapting per engagement

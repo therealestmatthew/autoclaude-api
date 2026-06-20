@@ -1,4 +1,4 @@
-"""Tests for `autoclaude-index` argparse + subcommand wiring."""
+"""Tests for `ft-autoclaude-index` argparse + subcommand wiring."""
 
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ def _isolate_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         Path(__file__).resolve().parents[2] / "fixtures" / "web" / "sample_repo"
     )
     shutil.copytree(fixture, repo)
-    monkeypatch.setenv("AUTOCLAUDE_REPO_ROOT", str(repo))
+    monkeypatch.setenv("FT_AUTOCLAUDE_REPO_ROOT", str(repo))
     monkeypatch.setenv(
-        "AUTOCLAUDE_INDEX_DSN", f"sqlite:///{(tmp_path / 'idx.sqlite').as_posix()}"
+        "FT_AUTOCLAUDE_INDEX_DSN", f"sqlite:///{(tmp_path / 'idx.sqlite').as_posix()}"
     )
     reset_settings()
     yield
@@ -56,7 +56,7 @@ def test_status_after_sync(capsys: pytest.CaptureFixture[str]) -> None:
     capsys.readouterr()  # drain
     main(["status"])
     err = capsys.readouterr().err
-    assert "autoclaude index status" in err
+    assert "ft-autoclaude index status" in err
     assert "schema_version" in err
 
 

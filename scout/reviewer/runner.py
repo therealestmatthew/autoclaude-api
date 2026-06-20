@@ -29,7 +29,7 @@ from .context import _split_body, get_context
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _QUEUE_DIR = REPO_ROOT / "scout" / "queue"
 _THREADS_DIR = REPO_ROOT / "command-center" / "threads"
-_DEFAULT_API_URL = os.environ.get("AUTOCLAUDE_API_URL", "http://localhost:8000")
+_DEFAULT_API_URL = os.environ.get("FT_AUTOCLAUDE_API_URL", "http://localhost:8000")
 _MAX_ESCALATION_RATE = 0.20
 
 
@@ -137,7 +137,7 @@ def run_review(
     client = anthropic.Anthropic(api_key=api_key)
     t_dir = threads_dir or _THREADS_DIR
     cap = budget_cap if budget_cap is not None else float(
-        os.environ.get("AUTOCLAUDE_REVIEWER_DAILY_BUDGET", "5.00")
+        os.environ.get("FT_AUTOCLAUDE_REVIEWER_DAILY_BUDGET", "5.00")
     )
     budget = _budget_mod.check_budget(cap=cap, threads_dir=t_dir)
 

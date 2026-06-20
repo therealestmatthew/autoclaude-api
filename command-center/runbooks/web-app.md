@@ -30,7 +30,7 @@ Two terminals.
 
 ```sh
 # Terminal A — backend
-uv run autoclaude-api
+uv run ft-autoclaude-api
 # → INFO: Uvicorn running on http://127.0.0.1:8000
 ```
 
@@ -61,18 +61,18 @@ The persistent index lives at `web/.data/index.sqlite` and is rebuildable from t
 ```sh
 curl -s -X POST http://localhost:8000/sync | jq
 # or, without the API running:
-uv run autoclaude-index sync
+uv run ft-autoclaude-index sync
 ```
 
 If the schema is wrong (or doesn't exist yet), upgrade it:
 
 ```sh
-uv run autoclaude-index upgrade        # alembic upgrade head
-uv run autoclaude-index status         # show meta + record count
-uv run autoclaude-index reset --yes    # drop + re-migrate + re-sync from scratch
+uv run ft-autoclaude-index upgrade        # alembic upgrade head
+uv run ft-autoclaude-index status         # show meta + record count
+uv run ft-autoclaude-index reset --yes    # drop + re-migrate + re-sync from scratch
 ```
 
-By default the API runs `alembic upgrade head` automatically on boot, so the only time you'd run `upgrade` by hand is in a deploy script that prefers explicit migrations. Set `AUTOCLAUDE_INDEX_AUTO_MIGRATE=0` to disable the on-boot upgrade.
+By default the API runs `alembic upgrade head` automatically on boot, so the only time you'd run `upgrade` by hand is in a deploy script that prefers explicit migrations. Set `FT_AUTOCLAUDE_INDEX_AUTO_MIGRATE=0` to disable the on-boot upgrade.
 
 ## Stop
 
@@ -84,16 +84,16 @@ Backend env vars (read once at startup):
 
 | Var                          | Default                                              | What it controls                          |
 | ---------------------------- | ---------------------------------------------------- | ----------------------------------------- |
-| `AUTOCLAUDE_REPO_ROOT`       | the repo containing `web/apps/api/`                  | where the indexer walks                   |
-| `AUTOCLAUDE_API_HOST`        | `127.0.0.1`                                          | bind host                                 |
-| `AUTOCLAUDE_API_PORT`        | `8000`                                               | bind port                                 |
-| `AUTOCLAUDE_API_CORS_ORIGINS`| `http://localhost:3000,http://127.0.0.1:3000`        | comma-separated allowed origins           |
-| `AUTOCLAUDE_API_LOG_LEVEL`   | `info`                                               | uvicorn log level                         |
-| `AUTOCLAUDE_INDEX_DSN`       | `sqlite:///web/.data/index.sqlite` (resolved against `AUTOCLAUDE_REPO_ROOT`) | SQLAlchemy connection string. Override for Postgres in 8.5. |
-| `AUTOCLAUDE_INDEX_RECONCILE_INTERVAL` | `60`                                        | seconds between background syncs; `0` disables the loop (useful in tests). |
-| `AUTOCLAUDE_INDEX_AUTO_MIGRATE`| `1`                                                | run `alembic upgrade head` on API boot. Set `0` in production / CI to make migrations an explicit deploy step. |
-| `AUTOCLAUDE_GIT_AUTHOR_NAME`   | falls back to `git config user.name`               | author of web-driven commits (8.3 write-back). |
-| `AUTOCLAUDE_GIT_AUTHOR_EMAIL`  | falls back to `git config user.email`              | author email of web-driven commits. The backend refuses to write if neither env nor git config provides one. |
+| `FT_AUTOCLAUDE_REPO_ROOT`       | the repo containing `web/apps/api/`                  | where the indexer walks                   |
+| `FT_AUTOCLAUDE_API_HOST`        | `127.0.0.1`                                          | bind host                                 |
+| `FT_AUTOCLAUDE_API_PORT`        | `8000`                                               | bind port                                 |
+| `FT_AUTOCLAUDE_API_CORS_ORIGINS`| `http://localhost:3000,http://127.0.0.1:3000`        | comma-separated allowed origins           |
+| `FT_AUTOCLAUDE_API_LOG_LEVEL`   | `info`                                               | uvicorn log level                         |
+| `FT_AUTOCLAUDE_INDEX_DSN`       | `sqlite:///web/.data/index.sqlite` (resolved against `FT_AUTOCLAUDE_REPO_ROOT`) | SQLAlchemy connection string. Override for Postgres in 8.5. |
+| `FT_AUTOCLAUDE_INDEX_RECONCILE_INTERVAL` | `60`                                        | seconds between background syncs; `0` disables the loop (useful in tests). |
+| `FT_AUTOCLAUDE_INDEX_AUTO_MIGRATE`| `1`                                                | run `alembic upgrade head` on API boot. Set `0` in production / CI to make migrations an explicit deploy step. |
+| `FT_AUTOCLAUDE_GIT_AUTHOR_NAME`   | falls back to `git config user.name`               | author of web-driven commits (8.3 write-back). |
+| `FT_AUTOCLAUDE_GIT_AUTHOR_EMAIL`  | falls back to `git config user.email`              | author email of web-driven commits. The backend refuses to write if neither env nor git config provides one. |
 
 Frontend env vars (`web/apps/web/.env.local`):
 
@@ -107,11 +107,11 @@ Frontend env vars (`web/apps/web/.env.local`):
 
 The frontend can't reach the backend. Check:
 
-1. Is `uv run autoclaude-api` running? `curl http://localhost:8000/health` should respond.
+1. Is `uv run ft-autoclaude-api` running? `curl http://localhost:8000/health` should respond.
 2. Does `NEXT_PUBLIC_API_URL` match the backend bind? Restart `npm run dev` after editing `.env.local`.
 3. Is the backend's CORS allow-list permitting the frontend's origin?
 
-### "Address already in use" on `uv run autoclaude-api`
+### "Address already in use" on `uv run ft-autoclaude-api`
 
 Something else is on :8000. Find it:
 
@@ -122,7 +122,7 @@ lsof -i :8000
 Either stop that process or run with a different port:
 
 ```sh
-AUTOCLAUDE_API_PORT=8001 uv run autoclaude-api
+FT_AUTOCLAUDE_API_PORT=8001 uv run ft-autoclaude-api
 # remember to also bump NEXT_PUBLIC_API_URL on the frontend
 ```
 
@@ -132,16 +132,16 @@ The web deps aren't installed. Run `uv sync --group web` (or `uv sync` if `dev` 
 
 ### `no such table: asset`
 
-The DB schema isn't initialised. The API auto-migrates on boot by default; this error usually means `AUTOCLAUDE_INDEX_AUTO_MIGRATE=0` is set or the DSN points somewhere the migrations haven't been applied. Fix:
+The DB schema isn't initialised. The API auto-migrates on boot by default; this error usually means `FT_AUTOCLAUDE_INDEX_AUTO_MIGRATE=0` is set or the DSN points somewhere the migrations haven't been applied. Fix:
 
 ```sh
-uv run autoclaude-index upgrade
+uv run ft-autoclaude-index upgrade
 ```
 
 If the DB ended up in an unrecoverable state (e.g. mid-development schema churn), wipe and start fresh:
 
 ```sh
-uv run autoclaude-index reset --yes
+uv run ft-autoclaude-index reset --yes
 ```
 
 ### Catalog asset shows up with an "issues" badge
@@ -178,7 +178,7 @@ uv run pytest tests/integration/web -q
 | Backend code                  | `/web/apps/api/`                        |
 | Persistent-index code         | `/web/apps/api/db/` + `/web/migrations/` |
 | Frontend code                 | `/web/apps/web/`                        |
-| Entry-point scripts           | `/tools/web.py` → `uv run autoclaude-api`, `/tools/index.py` → `uv run autoclaude-index` |
+| Entry-point scripts           | `/tools/web.py` → `uv run ft-autoclaude-api`, `/tools/index.py` → `uv run ft-autoclaude-index` |
 | Tests                         | `/tests/unit/web/`, `/tests/integration/web/` |
 | Test fixtures                 | `/tests/fixtures/web/sample_repo/`      |
 | SQLite (gitignored)           | `/web/.data/index.sqlite`               |

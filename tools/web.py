@@ -1,4 +1,4 @@
-"""Entry point for `uv run autoclaude-api`.
+"""Entry point for `uv run ft-autoclaude-api`.
 
 Thin wrapper so the runbook command stays stable even if the FastAPI app
 module moves. Delegates to `web.apps.api.main.serve()`.

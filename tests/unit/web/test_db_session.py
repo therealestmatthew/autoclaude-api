@@ -15,7 +15,7 @@ def test_resolve_dsn_default_creates_parent(tmp_path: Path) -> None:
 
 def test_resolve_dsn_honours_env_override(tmp_path: Path) -> None:
     override = "postgresql+psycopg://localhost/index"
-    dsn = resolve_dsn(tmp_path, env={"AUTOCLAUDE_INDEX_DSN": override})
+    dsn = resolve_dsn(tmp_path, env={"FT_AUTOCLAUDE_INDEX_DSN": override})
     assert dsn == override
     # Crucially: the default SQLite parent is NOT created on override.
     assert not (tmp_path / "web" / ".data").exists()

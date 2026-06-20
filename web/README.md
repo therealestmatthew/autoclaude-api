@@ -1,6 +1,6 @@
 ---
 name: web-readme
-title: "/web/ — operator UI for the autoclaude command center"
+title: "/web/ — operator UI for the FT-AutoClaude command center"
 kind: readme
 status: active
 updated_at: 2026-06-16
@@ -18,7 +18,7 @@ See `/docs/plans/phase-8-web-command-center.md` for the design and the milestone
 /web/
   README.md              this file
   apps/
-    api/                 FastAPI backend; part of the autoclaude Python package
+    api/                 FastAPI backend; part of the ft_autoclaude Python project
     web/                 Next.js 15 frontend; standalone npm project
 ```
 
@@ -29,7 +29,7 @@ The backend and frontend are intentionally separated so they can deploy independ
 ```sh
 # Backend (one terminal)
 uv sync --group web
-uv run autoclaude-api               # FastAPI on http://localhost:8000
+uv run ft-autoclaude-api               # FastAPI on http://localhost:8000
 
 # Frontend (another terminal)
 cd web/apps/web

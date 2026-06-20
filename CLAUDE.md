@@ -3,7 +3,7 @@ name: claude-md
 title: "CLAUDE.md — operating brief for Claude Code in this repo"
 kind: convention
 status: active
-updated_at: 2026-06-15
+updated_at: 2026-06-19
 ---
 
 # CLAUDE.md
@@ -12,7 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A command-and-control center for an agentic consulting & software-delivery practice. Two business halves (`/consulting/`, `/claude/`) sit on top of three cross-cutting subsystems (`/catalog/`, `/scout/`, `/command-center/`). The repo is markdown-first — git *is* the database. Python tooling will be added as specific agents are built; **no application code exists yet** as of Phase 0.
+**FT-AutoClaude — an Agentic Solutions Marketplace for Finance Transformation consulting.** A private hard-fork of the open-source `autoclaude` command-and-control center, retargeted for a Finance Transformation consulting practice. Two business halves (`/consulting/`, `/claude/`) sit on top of three cross-cutting subsystems (`/catalog/`, `/scout/`, `/command-center/`). The repo is markdown-first — git *is* the database — with a Python + FastAPI backend and Next.js operator UI on top.
+
+Phase 10 introduces per-client branding, document templates that bundle brand + content for export, asset notes with audit semantics, a business-process taxonomy, and a marketplace-shaped UI on top of the existing catalog. The strategic blueprint and locked decisions live at `/docs/plans/company-edition.md` — read that before proposing architectural changes.
 
 ## Repo layout (and what each dir is for)
 
@@ -21,35 +23,42 @@ A command-and-control center for an agentic consulting & software-delivery pract
 /catalog/            the master DB — flat collection of <slug>.md polymorphic asset files
   /_schema/          canonical schema + spec for an asset
   /_examples/        worked examples (agent, skill, repo + extracted child)
+  /templates/        (Phase 10.2+) PPTX/DOCX/XLSX deliverable templates with .meta.yaml sidecars
+  /bundles/          (Phase 10.2+) bundle compositions (template + generator + brand resolution)
 /scout/              discovery pipeline
   /sources/          one YAML per source (HN, Lobsters, Reddit, awesome-lists, X handles)
   /queue/            candidates pending human review
   /state/            per-source cursors (last-seen markers)
-  /agent/            Python agent code (empty in Phase 0)
-  /extractors/       per-source extractors (empty in Phase 0)
+  /agent/            Python orchestrator
+  /extractors/       per-source extractors
+  /reviewer/         (Phase 9.0) LLM-driven triage agent
 /claude/             agentic-delivery IP we own and use
   /agents/ /skills/ /plugins/ /mcp/ /prompts/ /playbooks/
 /consulting/         the consulting business
   /methodologies/    delivery / discovery / estimation playbooks
-  /templates/        proposals, SOWs, status reports, retros
+    /templates/      proposals, SOWs, status reports, retros (prose templates — Phase 10.0 rename)
   /positioning/ /offers/ /pricing/ /case-studies/   (stubs)
   /engagements/      one folder per client engagement; _template/ is the skeleton
+/clients/            (Phase 10.1+) one folder per client; brand reference + context
+/brands/             (Phase 10.1+) <client-slug>/brand.md + binary assets (logos, fonts, masters)
+/domain/             (Phase 10.4+) finance-transformation ontology (glossary, process map)
 /command-center/     orchestration & observability
   /threads/          log of agentic threads
   /token-burn/       logs + reports
   /runbooks/         how to operate the system
-/web/                Phase 8 web command center (operator UI)
-  /apps/api/         FastAPI backend; part of the autoclaude Python package
+/web/                Phase 8+ web command center (operator UI)
+  /apps/api/         FastAPI backend; part of the ft_autoclaude Python project
   /apps/web/         Next.js 15 + Tailwind frontend; standalone npm project
+/tools/              CLI entry points (web, index, manifest) — thin wrappers around web/apps/api
 ```
 
 ## Core conventions (read `/conventions/` for full detail)
 
-- **Markdown + YAML frontmatter everywhere.** No DB, no JSON sidecars. If something isn't expressible in a markdown file, push back before adding infra.
-- **Catalog assets are polymorphic.** One file shape, distinguished by `kind:` (agent | skill | plugin | mcp | prompt | repo | article | person | org). Filenames are `<slug>.md` — no kind prefix, no subfolders by kind.
+- **Markdown + YAML frontmatter everywhere.** No DB-only state for catalog content. If something isn't expressible in a markdown file, push back before adding infra. (Operational DB entities like `client`, `note`, `export_job` are the documented exceptions — see `/docs/plans/company-edition.md`.)
+- **Catalog assets are polymorphic.** One file shape, distinguished by `kind:`. The kind enum is split into `catalog_kind` (closed, governs `/catalog/` + `/brands/`) and `document_kind` (open, governs READMEs, conventions, plans, etc.). See `/conventions/kinds.md`. Filenames are `<slug>.md` — no kind prefix, no subfolders by kind (except the curated `templates/` and `bundles/` subdirs).
 - **The graph lives in `relations:`.** A `repo` asset can have many `agent`/`skill` children via `parent: <repo-slug>`. Use `related:` for peers, `supersedes:` for replacements.
-- **Provenance is required.** Every catalog asset carries `source.*` and `discovered.*` blocks so we can trace where it came from and when.
-- **Slugs are kebab-case and globally unique** across all kinds. The slug is the asset's identity; renaming it breaks links.
+- **Provenance is required.** Every catalog asset carries `source.*` and `discovered.*` blocks so we can trace where it came from and when. Operator-authored entities (clients, brands) live in DB tables and skip provenance — that's intentional.
+- **Slugs are kebab-case and globally unique** within their bucket. Slug-FKs from DB tables to catalog assets are protected by a rename guardrail: renaming a referenced asset returns `409 referenced-by` unless `?cascade=true` is passed.
 
 ## Where new content goes
 
@@ -58,7 +67,12 @@ A command-and-control center for an agentic consulting & software-delivery pract
 | A raw signal from a discovery source (not yet reviewed) | `/scout/queue/`                  |
 | A reviewed, kept asset (anything we want to remember)   | `/catalog/<slug>.md`             |
 | An asset we've adopted into our working toolkit         | `/claude/<area>/` **and** keep the catalog entry with `status: adopted` |
-| A consulting methodology / template / engagement        | `/consulting/<area>/`            |
+| A consulting methodology / template (prose)             | `/consulting/methodologies/`     |
+| A consulting engagement                                 | `/consulting/engagements/<year>-<client>/` |
+| A client identity + brand reference                     | `/clients/<slug>/` + `/brands/<slug>/` (Phase 10.1+) |
+| A deliverable template (PPTX/DOCX/XLSX)                 | `/catalog/templates/<slug>.md` + `files/<slug>.<ext>` (Phase 10.2+) |
+| A bundle composition (template + generator + brand)     | `/catalog/bundles/<slug>.md` (Phase 10.2+) |
+| Finance-transformation domain knowledge                 | `/domain/finance-transformation/` (Phase 10.4+) |
 | An operator runbook for the system itself               | `/command-center/runbooks/`      |
 | Browser UI changes (catalog browser, dashboard, …)      | `/web/apps/api/` + `/web/apps/web/` — see `/conventions/web-app.md` |
 
@@ -67,15 +81,15 @@ The catalog is the long-term memory. `/claude/` is what we actively use. An asse
 ## Scout pipeline (mental model)
 
 ```
-discovery sources  →  raw signals  →  /scout/queue/  →  human review  →  /catalog/
-(socials, awesome-                    (one candidate    (merge into
- lists; GitHub is                      file per find)    existing /
- extraction target,                                      create new /
- NOT a discovery                                         discard)
+discovery sources  →  raw signals  →  /scout/queue/  →  reviewer agent  →  /catalog/
+(socials, awesome-                    (one candidate    (9.0 LLM
+ lists; GitHub is                      file per find)    triage with
+ extraction target,                                      operator gate)
+ NOT a discovery
  surface)
 ```
 
-GitHub is the *target* of extraction — once we have a repo URL, an extractor (future) clones it and proposes child assets. GitHub is **not** crawled directly for discovery; signals come from socials and curated lists.
+GitHub is the *target* of extraction — once we have a repo URL, an extractor clones it (in a per-clone Docker container per `/conventions/security.md`) and proposes child assets. GitHub is **not** crawled directly for discovery; signals come from socials and curated lists.
 
 ## Merge / dedup rules (short version, full in `/conventions/merge-rules.md`)
 
@@ -86,7 +100,7 @@ When reviewing a queue candidate against the catalog:
 3. **Same artifact, different source** → keep one canonical asset, add the alternate URL to `source.alternates`.
 4. **Genuinely new** → create new asset; if it relates to existing ones, fill `relations.related`.
 
-Phase 0 is human-in-the-loop. Don't auto-merge.
+The reviewer agent (Phase 9.0) writes proposals to a DB table; an operator triages via the `/proposals` UI.
 
 ## Working in this repo
 
@@ -115,19 +129,19 @@ uv run pytest -k slugify                  # filter by name substring
 uv run ruff check scout/ web/ tests/      # lint
 uv run ruff check scout/ web/ tests/ --fix # autofix safe issues
 
-uv run autoclaude-api                     # FastAPI backend for the web UI on :8000
+uv run ft-autoclaude-api                  # FastAPI backend for the web UI on :8000
 ( cd web/apps/web && npm run dev )        # Next.js frontend on :3000 (requires `npm install` first)
 
 uv run scout review --dry-run             # reviewer agent: preview decisions (no writes; no API key spend)
 uv run scout review --limit 25            # reviewer agent: generate pending proposals (API key + API server required)
 uv run scout review --evals               # eval harness: score against golden set (API key required)
 
-uv run autoclaude-index sync              # populate / refresh the persistent index (SQLite default at web/.data/index.sqlite)
-uv run autoclaude-index status            # show current sync state
-uv run autoclaude-index upgrade           # alembic upgrade head; rarely needed (API auto-migrates on boot)
+uv run ft-autoclaude-index sync           # populate / refresh the persistent index (SQLite default at web/.data/index.sqlite)
+uv run ft-autoclaude-index status         # show current sync state
+uv run ft-autoclaude-index upgrade        # alembic upgrade head; rarely needed (API auto-migrates on boot)
 ```
 
-`scout`, `autoclaude-api`, and `autoclaude-index` are exposed as console scripts via `pyproject.toml`. The full testing protocol lives in `/conventions/testing.md`; web app rules live in `/conventions/web-app.md`; the web runbook lives at `/command-center/runbooks/web-app.md`. The persistent-index design lives at `/docs/plans/phase-8-2-persistent-index.md`.
+`scout`, `ft-autoclaude-api`, and `ft-autoclaude-index` are exposed as console scripts via `pyproject.toml`. Environment variables for the web stack are prefixed `FT_AUTOCLAUDE_*` (see `/command-center/runbooks/web-app.md`). The full testing protocol lives in `/conventions/testing.md`; web app rules live in `/conventions/web-app.md`; the web runbook lives at `/command-center/runbooks/web-app.md`. The persistent-index design lives at `/docs/plans/phase-8-2-persistent-index.md`.
 
 ### Conventions
 
@@ -136,11 +150,12 @@ uv run autoclaude-index upgrade           # alembic upgrade head; rarely needed 
 - **Keep the catalog clean.** Drafts and raw finds live in `/scout/queue/`. Only reviewed assets land in `/catalog/`.
 - **When in doubt about a convention**, read `/conventions/` first. If the answer isn't there, ask before inventing.
 
-### Python package layout
+### Python project layout
 
 ```
-scout/                    Python package
+scout/                    discovery subsystem (Python package)
   _util.py                slugify, canonical_github_url, parse_frontmatter
+  _security.py            Phase 3.0 security baseline shared by extractors
   agent/
     types.py              Candidate, SourceState, per-source config models
     runner.py             run_once orchestrator
@@ -152,18 +167,28 @@ scout/                    Python package
     base.py               Extractor Protocol
     awesome_list.py       Phase 2 extractor
     repo.py               Phase 4 extractor
+    hackernews.py, reddit.py, lobsters.py   Phase 3 extractors
+  reviewer/               Phase 9.0 LLM triage agent
   sources/                YAML configs (data, not Python)
   state/                  per-source persisted state (gitignored at runtime)
   queue/                  candidate markdown files (gitignored at runtime)
+tools/                    CLI entry-point wrappers
+  web.py                  → `ft-autoclaude-api`
+  index.py                → `ft-autoclaude-index`
+  manifest.py             → `manifest` (frontmatter scanner)
+web/apps/api/             FastAPI backend (Phase 8+)
+  db/                     SQLAlchemy models, session, sync engine
+  routers/                catalog, queue, engagements, conventions, plans, proposals, threads, …
+  writes/                 8.3 write-back: fs/git/editor/triage/audit
+migrations/               Alembic — schema versioned at 0002 (8.3); 10.x adds 0003+
 tests/
   conftest.py             shared fixtures (sample_candidate, mock httpx factory)
   unit/                   fast, isolated, contract-level tests
   integration/            multi-module flows with isolated filesystem (no network)
-    conftest.py           scout_world fixture + auto-applies `integration` marker
-  fixtures/               static sample inputs reused across tests
+  evals/                  golden-set harness (Phase 9.0 reviewer)
 ```
 
-The `scout/` directory mixes Python code and data dirs by design — the per-source YAML configs and the queue/state runtime data live next to the code that produces and consumes them. Don't move to a `src/` layout without a strong reason.
+The `scout/` directory is the **discovery subsystem** (Python package + its YAML data + runtime queue/state). It mixes Python code and data dirs by design — the per-source configs and runtime data live next to the code that produces and consumes them. The directory name predates the FT-AutoClaude rebrand and is preserved as a meaningful subsystem name; do not rename it.
 
 When adding a new test, follow `/conventions/testing.md` for which directory it belongs in and what fixtures to reuse.
 
@@ -172,14 +197,17 @@ When adding a new test, follow `/conventions/testing.md` for which directory it 
 - **Phase 0 (done):** scaffold, conventions, schema, seed examples.
 - **Phase 1 (done):** hand-curate the catalog with assets we already use.
 - **Phase 2 (done):** scout v1 — awesome-list extractor + runner + queue + thread log.
-- **Phase 3 (done):** scout v2 — HN / Reddit / Lobsters extractors on the Phase 3.0 security baseline (`scout/_security.py`, `conventions/security.md`).
-- **Phase 4 (done):** repo extractor (GitHub URL → child assets), running each clone in a per-clone Docker container per `/conventions/security.md`. Podman runtime is reserved (stub raises `NotImplementedError`).
-- **Phase 5:** X / Twitter ingestion.
-- **Phase 6:** automated merge/dedup decisioning.
+- **Phase 3 (done):** scout v2 — HN / Reddit / Lobsters extractors on the Phase 3.0 security baseline.
+- **Phase 4 (done):** repo extractor running each clone in a per-clone Docker container.
+- **Phase 5:** X / Twitter ingestion (deferred).
+- **Phase 6:** automated merge/dedup decisioning (designed in 9.0 plan, not yet shipped).
 - **Phase 7 (done):** command-center observability (token burn, threads).
-- **Phase 8 (active):** web command center — operator UI over the catalog, queue, threads, engagements. See `/docs/plans/phase-8-web-command-center.md`.
-- **Phase 9.0 (active):** reviewer agent — LLM-driven keep/merge/discard proposals for queue candidates. See `/docs/plans/phase-9-0-reviewer-agent.md`.
-- **Phase 9+:** consulting buildout; semantic-search context (pgvector); cloud deploy.
+- **Phase 8 (done):** web command center — operator UI over catalog/queue/threads/engagements.
+- **Phase 9.0 (done):** reviewer agent — LLM-driven keep/merge/discard proposals.
+- **Phase 10 (active — FT-AutoClaude pivot):** company edition. Clients, brands, templates, bundles, export pipeline, business-process taxonomy, marketplace UX, configurable sidebar, drag/drop ingestion, cloud-readiness seams. See `/docs/plans/company-edition.md`.
+  - **10.0 (done):** fork, project rename (`autoclaude` → `ft_autoclaude`; CLI `autoclaude-*` → `ft-autoclaude-*`; env `AUTOCLAUDE_*` → `FT_AUTOCLAUDE_*`), schema hygiene (kind enum split into `catalog_kind` + `document_kind`; `/consulting/templates/` moved under `/consulting/methodologies/`; brand `.meta.yaml` exception documented).
+  - **10.1 → 10.8:** client/brand entity, templates+bundles+export pipeline, notes+sensitivity, taxonomy+ontology+voice, marketplace UX+approval workflow, sidebar, ingestion (markdown + tabular), cloud-readiness pass.
+- **Phase 11+:** AWS deploy (Cognito, RDS, S3, ECS, CloudFront, Secrets Manager). Workflow builder. Granular RBAC.
 
 ## Planning lineage
 

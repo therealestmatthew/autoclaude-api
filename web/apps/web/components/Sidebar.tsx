@@ -32,7 +32,7 @@ export function Sidebar() {
       <div className="px-5 py-5 border-b border-zinc-200 dark:border-zinc-800">
         <Link href="/dashboard" className="block">
           <div className="text-xs uppercase tracking-widest text-zinc-500">
-            autoclaude
+            FT-AutoClaude
           </div>
           <div className="text-base font-semibold mt-0.5">command center</div>
         </Link>
