@@ -2,7 +2,6 @@ import { api } from "@/lib/api";
 import { AssetCard } from "@/components/AssetCard";
 import { ApiBanner } from "@/components/ApiBanner";
 
-export const dynamic = "force-dynamic";
 
 export default async function EngagementsPage() {
   let list;

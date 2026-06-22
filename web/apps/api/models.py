@@ -23,6 +23,8 @@ Bucket = Literal[
     "readme",
     "claude",
     "consulting",
+    "brand",
+    "timeline",
     "other",
 ]
 
@@ -45,6 +47,7 @@ class AssetSummary(BaseModel):
     status: str | None = None
     quality: int | None = None
     tags: list[str] = []
+    delivery_functions: list[str] = []
     created_at: str | None = None
     updated_at: str | None = None
     issues: list[str] = []
@@ -250,4 +253,89 @@ class AuditEventDetail(AuditEventSummary):
 
 class AuditListResponse(BaseModel):
     items: list[AuditEventSummary]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Phase 10.1 — Client + Brand + BusinessProcess wire shapes
+# ---------------------------------------------------------------------------
+
+
+class ClientCreate(BaseModel):
+    slug: str
+    name: str
+    industry: str | None = None
+    brand_slug: str | None = None
+    engagement_context: str | None = None
+
+
+class ClientUpdate(BaseModel):
+    name: str | None = None
+    industry: str | None = None
+    brand_slug: str | None = None
+    engagement_context: str | None = None
+
+
+class ClientItem(BaseModel):
+    slug: str
+    name: str
+    industry: str | None = None
+    brand_slug: str | None = None
+    engagement_context: str | None = None
+    created_at: float
+    updated_at: float
+
+
+class ClientListResponse(BaseModel):
+    items: list[ClientItem]
+    total: int
+
+
+class BusinessProcessItem(BaseModel):
+    slug: str
+    name: str
+    parent_slug: str | None = None
+    description: str | None = None
+
+
+class BusinessProcessListResponse(BaseModel):
+    items: list[BusinessProcessItem]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Timeline wire shapes — markdown-backed, entries in frontmatter
+# ---------------------------------------------------------------------------
+
+
+class TimelineEntry(BaseModel):
+    title: str
+    type: str = "event"            # milestone | phase | deliverable | event
+    date: str | None = None        # YYYY-MM-DD; required unless start/end set
+    start: str | None = None       # YYYY-MM-DD for ranges
+    end: str | None = None
+    color: str | None = None       # emerald | blue | amber | rose | violet | zinc
+    ref: str | None = None         # optional slug to link to (any catalog asset)
+    notes: str | None = None
+
+
+class TimelineSummary(BaseModel):
+    path: str
+    slug: str
+    title: str | None
+    status: str | None
+    view: str = "list"             # list | month — hint for the renderer
+    entry_count: int
+    first_date: str | None = None
+    last_date: str | None = None
+    tags: list[str] = []
+
+
+class TimelineDetail(TimelineSummary):
+    body: str
+    entries: list[TimelineEntry]
+
+
+class TimelineListResponse(BaseModel):
+    items: list[TimelineSummary]
     total: int

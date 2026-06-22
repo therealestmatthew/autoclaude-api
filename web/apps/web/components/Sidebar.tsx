@@ -11,19 +11,52 @@ import {
   ScrollText,
   Activity,
   ClipboardList,
+  Wrench,
+  CalendarRange,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import navConfig from "@/nav.config.json";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/catalog", label: "Catalog", Icon: Database },
-  { href: "/queue", label: "Queue", Icon: Inbox },
-  { href: "/proposals", label: "Proposals", Icon: ClipboardList },
-  { href: "/threads", label: "Threads", Icon: Activity },
-  { href: "/engagements", label: "Engagements", Icon: Briefcase },
-  { href: "/conventions", label: "Conventions", Icon: BookOpen },
-  { href: "/plans", label: "Plans", Icon: ScrollText },
-] as const;
+type TabKey =
+  | "dashboard"
+  | "skills"
+  | "timelines"
+  | "engagements"
+  | "catalog"
+  | "queue"
+  | "proposals"
+  | "threads"
+  | "conventions"
+  | "plans";
+
+const TAB_REGISTRY: Record<TabKey, { href: string; label: string; Icon: LucideIcon }> = {
+  dashboard:   { href: "/dashboard",   label: "Dashboard",    Icon: LayoutDashboard },
+  skills:      { href: "/skills",      label: "Skills & Tools", Icon: Wrench },
+  timelines:   { href: "/timelines",   label: "Timelines",    Icon: CalendarRange },
+  engagements: { href: "/engagements", label: "Engagements",  Icon: Briefcase },
+  catalog:     { href: "/catalog",     label: "Catalog",      Icon: Database },
+  queue:       { href: "/queue",       label: "Queue",        Icon: Inbox },
+  proposals:   { href: "/proposals",   label: "Proposals",    Icon: ClipboardList },
+  threads:     { href: "/threads",     label: "Threads",      Icon: Activity },
+  conventions: { href: "/conventions", label: "Conventions",  Icon: BookOpen },
+  plans:       { href: "/plans",       label: "Plans",        Icon: ScrollText },
+};
+
+// In static mode, hide tabs whose backing data isn't in the static bundle.
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
+const STATIC_HIDDEN: ReadonlySet<TabKey> = new Set<TabKey>([
+  "queue",
+  "proposals",
+  "threads",
+  "engagements",
+  "timelines",
+]);
+
+const NAV = navConfig.tabs
+  .filter((t) => t.enabled && t.key in TAB_REGISTRY)
+  .filter((t) => !(STATIC_MODE && STATIC_HIDDEN.has(t.key as TabKey)))
+  .map((t) => TAB_REGISTRY[t.key as TabKey]);
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -58,7 +91,7 @@ export function Sidebar() {
         })}
       </nav>
       <div className="px-5 py-4 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500">
-        Phase 8.3 · write-back
+        Forge · Phase 10.1
       </div>
     </aside>
   );

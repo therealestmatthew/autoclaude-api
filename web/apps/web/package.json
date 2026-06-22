@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "echo '\n  FT-AutoClaude web  →  http://localhost:3001\n  API backend         →  http://localhost:8080\n' && next dev --port 3001",
     "build": "next build",
+    "build:static": "NEXT_PUBLIC_STATIC_MODE=true next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"

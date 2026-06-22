@@ -24,6 +24,7 @@ def _row_to_record(row: Asset) -> AssetRecord:
         status=row.status,
         quality=row.quality,
         tags=tuple(row.tags or ()),
+        delivery_functions=tuple(row.delivery_functions or ()),
         source=row.source,
         discovered=row.discovered,
         relations=row.relations,

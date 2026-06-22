@@ -1,0 +1,14 @@
+{
+  "tabs": [
+    { "key": "dashboard", "enabled": true },
+    { "key": "skills", "enabled": true },
+    { "key": "timelines", "enabled": true },
+    { "key": "engagements", "enabled": true },
+    { "key": "catalog", "enabled": true },
+    { "key": "queue", "enabled": true },
+    { "key": "proposals", "enabled": true },
+    { "key": "threads", "enabled": true },
+    { "key": "conventions", "enabled": true },
+    { "key": "plans", "enabled": true }
+  ]
+}

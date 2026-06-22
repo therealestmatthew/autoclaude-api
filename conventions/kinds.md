@@ -26,7 +26,7 @@ Used for files under `/catalog/` and `/brands/`. The indexer's `bucket` classifi
 | `article`    | A blog post, doc page, paper, or video transcript.                                          | none             | `anthropic-effective-agents-essay`   |
 | `person`     | An individual whose output we want to track.                                                | none             | `simon-willison`                     |
 | `org`        | An organization (Anthropic, a vendor, a community) whose output we want to track.           | none             | `anthropic`                          |
-| `brand`      | (Phase 10.1+) A client's brand identity — colors, fonts, logos, voice, document masters.    | none             | `acme-co-brand`                      |
+| `brand`      | A client or firm brand identity — colors, fonts, logos, voice, document masters. Lives in `/brands/<slug>/brand.md`. | none | `forge-brand` |
 | `template`   | (Phase 10.2+) A deliverable template (PPTX/DOCX/XLSX) with placeholders and a generator.    | none             | `finance-current-state-deck`         |
 | `bundle`     | (Phase 10.2+) A composition of templates + business process + business-process tags.        | none             | `finance-quick-assessment-bundle`    |
 | `dataset`    | (Phase 10.7b+) A tabular client input (CSV/XLSX) with schema introspection in frontmatter.  | none             | `acme-gl-q2-2026`                    |
@@ -56,6 +56,7 @@ Used for everything else. These don't go in `/catalog/` and aren't expected to c
 | `engagement`     | The root document for a single client engagement.                                     | `/consulting/engagements/<year>-<slug>/`          |
 | `deck`           | A presentation outline or slide notes (not the binary export — those carry sidecars). | various                                           |
 | `generated`      | A document produced by an export pipeline; treat as derived, not source of truth.     | various, often in `/consulting/engagements/.../deliverables/` |
+| `timeline`       | A customizable date-shaped view (project plan, adoption roadmap, content calendar) with `entries:` in frontmatter. | `/timelines/<slug>.md` |
 
 If you find yourself wanting to add a value that overlaps with an existing one, prefer the existing one. If your value really is distinct, add it here in the same PR.
 

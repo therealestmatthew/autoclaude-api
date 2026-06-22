@@ -3,7 +3,16 @@ import { notFound } from "next/navigation";
 import { MarkdownBody } from "@/components/MarkdownBody";
 import { Badge } from "@/components/Badge";
 
-export const dynamic = "force-dynamic";
+
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
+
+export async function generateStaticParams() {
+  // Not part of the static export. One placeholder satisfies Next's
+  // requirement that this list be non-empty when `output: 'export'` is set.
+  return [{ slug: "__unavailable__" }];
+}
+
+export const dynamicParams = false;
 
 export default async function EngagementDetail({
   params,
@@ -11,6 +20,7 @@ export default async function EngagementDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (STATIC_MODE) notFound();
   let asset;
   try {
     asset = await api.engagements.get(slug);

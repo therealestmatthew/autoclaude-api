@@ -5,7 +5,14 @@ import { Badge } from "@/components/Badge";
 import { TriagePanel } from "@/components/TriagePanel";
 import { ProposalCard } from "@/components/ProposalCard";
 
-export const dynamic = "force-dynamic";
+
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
+
+export async function generateStaticParams() {
+  return [{ slug: "__unavailable__" }];
+}
+
+export const dynamicParams = false;
 
 export default async function QueueDetail({
   params,
@@ -13,6 +20,7 @@ export default async function QueueDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (STATIC_MODE) notFound();
   let asset;
   try {
     asset = await api.queue.get(slug);

@@ -5,6 +5,7 @@ title: "Supabase plugin for Claude Code"
 status: adopted
 quality: 5
 tags: [supabase, claude-code, plugin, postgres, mcp]
+delivery_function: [build, integration]
 source:
   type: github
   url: https://github.com/supabase-community/supabase-plugin

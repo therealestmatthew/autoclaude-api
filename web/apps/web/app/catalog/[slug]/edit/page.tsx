@@ -4,7 +4,15 @@ import { api } from "@/lib/api";
 import { FrontmatterForm } from "@/components/FrontmatterForm";
 import { BodyEditor } from "@/components/BodyEditor";
 
-export const dynamic = "force-dynamic";
+
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
+
+export async function generateStaticParams() {
+  // Edit pages aren't part of the static export — there's nothing to write back to.
+  return [{ slug: "__unavailable__" }];
+}
+
+export const dynamicParams = false;
 
 export default async function CatalogEdit({
   params,
@@ -12,6 +20,7 @@ export default async function CatalogEdit({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (STATIC_MODE) notFound();
   let raw;
   try {
     raw = await api.catalog.raw(slug);

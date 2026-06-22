@@ -5,6 +5,7 @@ title: "Skill: supabase-postgres-best-practices"
 status: adopted
 quality: 5
 tags: [supabase, postgres, performance, skill, claude-code]
+delivery_function: [build, integration]
 source:
   type: github
   url: https://github.com/supabase-community/supabase-plugin/tree/main/skills/supabase-postgres-best-practices

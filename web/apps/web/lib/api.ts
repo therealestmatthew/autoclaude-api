@@ -6,6 +6,12 @@ import type {
   AcceptProposalRequest,
   AssetDetail,
   AssetRaw,
+  BusinessProcessItem,
+  BusinessProcessListResponse,
+  ClientCreate,
+  ClientItem,
+  ClientListResponse,
+  ClientUpdate,
   EditBodyRequest,
   EditFrontmatterRequest,
   EditFullRequest,
@@ -17,6 +23,8 @@ import type {
   SearchResponse,
   StatsResponse,
   ThreadResponse,
+  TimelineDetail,
+  TimelineListResponse,
   TriageRequest,
   TriageResponse,
   WriteResponse,
@@ -24,6 +32,8 @@ import type {
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
 
 export class ApiError extends Error {
   constructor(
@@ -102,18 +112,55 @@ export const api = {
 
   health: () => get<Health>("/health"),
 
-  stats: () => get<StatsResponse>("/stats"),
+  stats: async (): Promise<StatsResponse> => {
+    if (STATIC_MODE) {
+      // Best-effort stats from the bundled catalog file. Avoids a 404 on
+      // the dashboard when there's no API server at build time.
+      const { staticData } = await import("./static-data");
+      const list = await staticData.catalog.list({ limit: 10000 });
+      const by_kind: Record<string, number> = {};
+      const by_status: Record<string, number> = {};
+      for (const i of list.items) {
+        if (i.kind) by_kind[i.kind] = (by_kind[i.kind] ?? 0) + 1;
+        if (i.status) by_status[i.status] = (by_status[i.status] ?? 0) + 1;
+      }
+      return {
+        stats: {
+          total: list.total,
+          by_bucket: { catalog: list.total },
+          by_kind,
+          by_status,
+          with_issues: 0,
+        },
+        repo_root: "",
+        snapshot_mtime: 0,
+      };
+    }
+    return get<StatsResponse>("/stats");
+  },
 
   catalog: {
-    list: (params: {
+    list: async (params: {
       kind?: string;
       status?: string;
       tag?: string;
       q?: string;
       offset?: number;
       limit?: number;
-    } = {}) => get<ListResponse>(`/catalog${qs(params)}`),
-    get: (slug: string) => get<AssetDetail>(`/catalog/${encodeURIComponent(slug)}`),
+    } = {}) => {
+      if (STATIC_MODE) {
+        const { staticData } = await import("./static-data");
+        return staticData.catalog.list(params);
+      }
+      return get<ListResponse>(`/catalog${qs(params)}`);
+    },
+    get: async (slug: string) => {
+      if (STATIC_MODE) {
+        const { staticData } = await import("./static-data");
+        return staticData.catalog.get(slug);
+      }
+      return get<AssetDetail>(`/catalog/${encodeURIComponent(slug)}`);
+    },
     raw: (slug: string) => get<AssetRaw>(`/catalog/${encodeURIComponent(slug)}/raw`),
     editFull: (slug: string, body: EditFullRequest) =>
       send<WriteResponse>("PUT", `/catalog/${encodeURIComponent(slug)}`, body),
@@ -132,12 +179,15 @@ export const api = {
   },
 
   queue: {
-    list: (params: {
+    list: async (params: {
       kind?: string;
       q?: string;
       offset?: number;
       limit?: number;
-    } = {}) => get<ListResponse>(`/queue${qs(params)}`),
+    } = {}) => {
+      if (STATIC_MODE) return { items: [], total: 0 } as ListResponse;
+      return get<ListResponse>(`/queue${qs(params)}`);
+    },
     get: (slug: string) => get<AssetDetail>(`/queue/${encodeURIComponent(slug)}`),
     triage: (slug: string, body: TriageRequest) =>
       send<TriageResponse>(
@@ -148,14 +198,17 @@ export const api = {
   },
 
   proposals: {
-    list: (params: {
+    list: async (params: {
       status?: string;
       source?: string;
       target_bucket?: string;
       target_path?: string;
       limit?: number;
       offset?: number;
-    } = {}) => get<ProposalListResponse>(`/proposals${qs(params)}`),
+    } = {}) => {
+      if (STATIC_MODE) return { items: [], total: 0 } as ProposalListResponse;
+      return get<ProposalListResponse>(`/proposals${qs(params)}`);
+    },
     get: (id: string) => get<ProposalDetail>(`/proposals/${encodeURIComponent(id)}`),
     accept: (id: string, body: AcceptProposalRequest = {}) =>
       send<TriageResponse>(
@@ -172,36 +225,119 @@ export const api = {
   },
 
   engagements: {
-    list: (params: { status?: string; q?: string } = {}) =>
-      get<ListResponse>(`/engagements${qs(params)}`),
+    list: async (params: { status?: string; q?: string } = {}) => {
+      if (STATIC_MODE) return { items: [], total: 0 } as ListResponse;
+      return get<ListResponse>(`/engagements${qs(params)}`);
+    },
     get: (slug: string) =>
       get<AssetDetail>(`/engagements/${encodeURIComponent(slug)}`),
   },
 
   conventions: {
-    list: () => get<ListResponse>("/conventions"),
-    get: (slug: string) =>
-      get<AssetDetail>(`/conventions/${encodeURIComponent(slug)}`),
+    list: async () => {
+      if (STATIC_MODE) {
+        const { staticData } = await import("./static-data");
+        return staticData.conventions.list();
+      }
+      return get<ListResponse>("/conventions");
+    },
+    get: async (slug: string) => {
+      if (STATIC_MODE) {
+        const { staticData } = await import("./static-data");
+        return staticData.conventions.get(slug);
+      }
+      return get<AssetDetail>(`/conventions/${encodeURIComponent(slug)}`);
+    },
   },
 
   plans: {
-    list: () => get<ListResponse>("/plans"),
-    get: (slug: string) => get<AssetDetail>(`/plans/${encodeURIComponent(slug)}`),
+    list: async () => {
+      if (STATIC_MODE) {
+        const { staticData } = await import("./static-data");
+        return staticData.plans.list();
+      }
+      return get<ListResponse>("/plans");
+    },
+    get: async (slug: string) => {
+      if (STATIC_MODE) {
+        const { staticData } = await import("./static-data");
+        return staticData.plans.get(slug);
+      }
+      return get<AssetDetail>(`/plans/${encodeURIComponent(slug)}`);
+    },
   },
 
   threads: {
-    list: (params: {
+    list: async (params: {
       date?: string;
       since?: string;
       until?: string;
       agent?: string;
       outcome?: string;
       limit?: number;
-    } = {}) => get<ThreadResponse>(`/threads${qs(params)}`),
-    recent: (params: { limit?: number; days?: number } = {}) =>
-      get<ThreadResponse>(`/threads/recent${qs(params)}`),
+    } = {}) => {
+      if (STATIC_MODE) return { events: [], total: 0, days_scanned: 0 } as ThreadResponse;
+      return get<ThreadResponse>(`/threads${qs(params)}`);
+    },
+    recent: async (params: { limit?: number; days?: number } = {}) => {
+      if (STATIC_MODE) return { events: [], total: 0, days_scanned: 0 } as ThreadResponse;
+      return get<ThreadResponse>(`/threads/recent${qs(params)}`);
+    },
   },
 
-  search: (params: { q: string; bucket?: string; limit?: number }) =>
-    get<SearchResponse>(`/search${qs(params)}`),
+  search: async (params: { q: string; bucket?: string; limit?: number }) => {
+    if (STATIC_MODE) {
+      // In static mode, run the search against the bundled catalog file.
+      const { staticData } = await import("./static-data");
+      const list = await staticData.catalog.list({ q: params.q, limit: params.limit ?? 200 });
+      return {
+        query: params.q,
+        hits: list.items.map((i) => ({ ...i, score: 1, matched: [] })),
+        total: list.total,
+      } as SearchResponse;
+    }
+    return get<SearchResponse>(`/search${qs(params)}`);
+  },
+
+  brands: {
+    list: async (params: { status?: string; q?: string } = {}) => {
+      if (STATIC_MODE) return { items: [], total: 0 } as ListResponse;
+      return get<ListResponse>(`/brands${qs(params)}`);
+    },
+    get: (slug: string) =>
+      get<AssetDetail>(`/brands/${encodeURIComponent(slug)}`),
+  },
+
+  clients: {
+    list: async (params: { q?: string; offset?: number; limit?: number } = {}) => {
+      if (STATIC_MODE) return { items: [], total: 0 } as ClientListResponse;
+      return get<ClientListResponse>(`/clients${qs(params)}`);
+    },
+    get: (slug: string) =>
+      get<ClientItem>(`/clients/${encodeURIComponent(slug)}`),
+    create: (body: ClientCreate) =>
+      send<ClientItem>("POST", "/clients", body),
+    update: (slug: string, body: ClientUpdate) =>
+      send<ClientItem>("PUT", `/clients/${encodeURIComponent(slug)}`, body),
+    delete: (slug: string) =>
+      send<void>("DELETE", `/clients/${encodeURIComponent(slug)}`),
+  },
+
+  processes: {
+    list: async (params: { q?: string } = {}) => {
+      if (STATIC_MODE) return { items: [], total: 0 } as BusinessProcessListResponse;
+      return get<BusinessProcessListResponse>(`/processes${qs(params)}`);
+    },
+    get: (slug: string) =>
+      get<BusinessProcessItem>(`/processes/${encodeURIComponent(slug)}`),
+  },
+
+  timelines: {
+    list: async () => {
+      if (STATIC_MODE) return { items: [], total: 0 } as TimelineListResponse;
+      return get<TimelineListResponse>("/timelines");
+    },
+    get: (slug: string) =>
+      get<TimelineDetail>(`/timelines/${encodeURIComponent(slug)}`),
+  },
 };

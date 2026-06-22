@@ -16,7 +16,7 @@ about storage only. Conversions live in `sync.py` (write) and `query.py`
 
 from __future__ import annotations
 
-from sqlalchemy import Column, Float, Index, Integer, String, Text
+from sqlalchemy import Boolean, Column, Float, Index, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import JSON
 
@@ -46,6 +46,7 @@ class Asset(Base):
     quality = Column(Integer, nullable=True)
 
     tags = Column(JSON, nullable=False, default=list)
+    delivery_functions = Column(JSON, nullable=False, default=list)
     source = Column(JSON, nullable=True)
     discovered = Column(JSON, nullable=True)
     relations = Column(JSON, nullable=True)
@@ -164,3 +165,55 @@ class Proposal(Base):
         Index("ix_proposal_status", "status"),
         Index("ix_proposal_created_at", "created_at"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 10.1 — Company Edition entities
+# ---------------------------------------------------------------------------
+
+
+class Client(Base):
+    """Lightweight lookup record for a named client engagement context.
+
+    Not a tenant boundary — just enough to default a brand and carry
+    engagement context into generator prompts for repeat exports.
+    """
+
+    __tablename__ = "client"
+
+    slug = Column(String(128), primary_key=True)
+    name = Column(String(256), nullable=False)
+    industry = Column(String(128), nullable=True)
+    brand_slug = Column(String(128), nullable=True)        # soft FK → asset.slug WHERE bucket='brand'
+    engagement_context = Column(Text, nullable=True)       # free-text injected into generator prompts
+    created_at = Column(Float, nullable=False)
+    updated_at = Column(Float, nullable=False)
+
+    __table_args__ = (
+        Index("ix_client_brand_slug", "brand_slug"),
+    )
+
+
+class BusinessProcess(Base):
+    """Controlled vocabulary of finance-transformation process areas."""
+
+    __tablename__ = "business_process"
+
+    slug = Column(String(64), primary_key=True)
+    name = Column(String(128), nullable=False)
+    parent_slug = Column(String(64), nullable=True)
+    description = Column(Text, nullable=True)
+
+
+class UserPreference(Base):
+    """Per-user configuration store (sidebar layout, theme, etc.).
+
+    `user_id` is 'default' until auth lands in Phase 11.
+    """
+
+    __tablename__ = "user_preference"
+
+    user_id = Column(String(128), primary_key=True)
+    key = Column(String(64), primary_key=True)
+    value = Column(JSON, nullable=False)
+    updated_at = Column(Float, nullable=False)

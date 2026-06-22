@@ -34,6 +34,8 @@ Bucket = Literal[
     "readme",
     "claude",
     "consulting",
+    "brand",
+    "timeline",
     "other",
 ]
 
@@ -48,6 +50,8 @@ ALL_BUCKETS: tuple[Bucket, ...] = (
     "readme",
     "claude",
     "consulting",
+    "brand",
+    "timeline",
     "other",
 )
 
@@ -80,6 +84,7 @@ class AssetRecord:
     status: str | None
     quality: int | None
     tags: tuple[str, ...]
+    delivery_functions: tuple[str, ...]  # from `delivery_function:` frontmatter field
     source: dict | None
     discovered: dict | None
     relations: dict | None
@@ -166,6 +171,22 @@ def classify_bucket(path: Path, repo_root: Path) -> Bucket:
     # READMEs almost everywhere get their own bucket — except where the README
     # is the canonical document for an engagement.
     is_readme = name.lower() == "readme.md"
+
+    if parts[0] == "brands":
+        # _template subtree is a scaffold, not a real brand.
+        if len(parts) >= 2 and parts[1] == "_template":
+            return "readme" if is_readme else "other"
+        if is_readme:
+            return "readme"
+        return "brand"
+
+    if parts[0] == "timelines":
+        # _template.md is a scaffold, not a real timeline.
+        if name == "_template.md":
+            return "other"
+        if is_readme:
+            return "readme"
+        return "timeline"
 
     if parts[0] == "catalog":
         # Skip the schema spec and the example/template subtrees.
@@ -320,6 +341,7 @@ def _record_from_path(path: Path, repo_root: Path) -> AssetRecord:
         status=status,
         quality=_coerce_quality(fm.get("quality")),
         tags=_coerce_tags(fm.get("tags")),
+        delivery_functions=_coerce_tags(fm.get("delivery_function")),
         source=fm.get("source") if isinstance(fm.get("source"), dict) else None,
         discovered=fm.get("discovered") if isinstance(fm.get("discovered"), dict) else None,
         relations=fm.get("relations") if isinstance(fm.get("relations"), dict) else None,

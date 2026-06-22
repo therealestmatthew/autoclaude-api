@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import { ProposalCard } from "@/components/ProposalCard";
 
-export const dynamic = "force-dynamic";
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
 
 type Search = { [k: string]: string | string[] | undefined };
 
@@ -15,6 +15,14 @@ export default async function ProposalsInbox({
 }: {
   searchParams: Promise<Search>;
 }) {
+  if (STATIC_MODE) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">Proposals</h1>
+        <p className="text-sm text-zinc-500">Proposals are not part of the static export.</p>
+      </div>
+    );
+  }
   const params = await searchParams;
   const status = pick(params, "status") ?? "pending";
   const source = pick(params, "source");

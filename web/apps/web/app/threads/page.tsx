@@ -2,13 +2,23 @@ import { api } from "@/lib/api";
 import { ApiBanner } from "@/components/ApiBanner";
 import { Badge } from "@/components/Badge";
 
-export const dynamic = "force-dynamic";
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
+
+function StaticUnavailable() {
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">Threads</h1>
+      <p className="text-sm text-zinc-500">Thread history is not part of the static export.</p>
+    </div>
+  );
+}
 
 export default async function ThreadsPage({
   searchParams,
 }: {
   searchParams: Promise<{ since?: string; until?: string; agent?: string }>;
 }) {
+  if (STATIC_MODE) return <StaticUnavailable />;
   const sp = await searchParams;
   let list;
   try {

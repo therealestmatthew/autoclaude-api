@@ -5,6 +5,7 @@ title: "Supabase MCP server (hosted)"
 status: adopted
 quality: 5
 tags: [supabase, mcp, hosted, http]
+delivery_function: [build, integration]
 source:
   type: manual
   url: https://mcp.supabase.com/mcp

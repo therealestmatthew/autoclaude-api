@@ -111,6 +111,7 @@ def _hash_record(rec: AssetRecord) -> str:
             "status": rec.status,
             "quality": rec.quality,
             "tags": list(rec.tags),
+            "delivery_functions": list(rec.delivery_functions),
             "source": rec.source,
             "discovered": rec.discovered,
             "relations": rec.relations,
@@ -138,6 +139,7 @@ def _apply_record(row: Asset, rec: AssetRecord, content_hash: str, run_id: str) 
     row.status = rec.status
     row.quality = rec.quality
     row.tags = list(rec.tags)
+    row.delivery_functions = list(rec.delivery_functions)
     row.source = _normalize_json(rec.source) if rec.source is not None else None
     row.discovered = (
         _normalize_json(rec.discovered) if rec.discovered is not None else None

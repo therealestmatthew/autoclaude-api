@@ -5,6 +5,7 @@ title: "Skill: supabase"
 status: adopted
 quality: 5
 tags: [supabase, skill, postgres, claude-code]
+delivery_function: [build, integration]
 source:
   type: github
   url: https://github.com/supabase-community/supabase-plugin/tree/main/skills/supabase

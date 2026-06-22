@@ -27,14 +27,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from .cache import CachedIndex, get_cached_index
 from .db import make_engine, make_session_factory, migrations_dir, resolve_dsn
 from .routers import (
+    brands,
     catalog,
+    clients,
     conventions,
     engagements,
+    processes,
     proposals,
     queue,
     search,
     stats,
     threads,
+    timelines,
     writes,
 )
 from .routers.deps import get_index
@@ -147,7 +151,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cfg.cors_origins),
-        allow_methods=["GET", "POST", "PUT"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
         allow_credentials=False,
     )
@@ -163,6 +167,10 @@ def create_app(
 
     app.include_router(stats.router)
     app.include_router(catalog.router)
+    app.include_router(brands.router)
+    app.include_router(clients.router)
+    app.include_router(processes.router)
+    app.include_router(timelines.router)
     app.include_router(queue.router)
     app.include_router(engagements.router)
     app.include_router(conventions.router)

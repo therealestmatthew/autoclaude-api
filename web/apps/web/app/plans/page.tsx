@@ -3,7 +3,6 @@ import { api } from "@/lib/api";
 import { ApiBanner } from "@/components/ApiBanner";
 import { Badge } from "@/components/Badge";
 
-export const dynamic = "force-dynamic";
 
 export default async function PlansPage() {
   let list;

@@ -2,13 +2,21 @@ import { api } from "@/lib/api";
 import { AssetCard } from "@/components/AssetCard";
 import { ApiBanner } from "@/components/ApiBanner";
 
-export const dynamic = "force-dynamic";
+const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_MODE === "true";
 
 export default async function QueuePage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  if (STATIC_MODE) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">Queue</h1>
+        <p className="text-sm text-zinc-500">The scout queue is not part of the static export.</p>
+      </div>
+    );
+  }
   const sp = await searchParams;
   let list;
   try {

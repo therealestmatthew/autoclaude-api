@@ -61,5 +61,8 @@ htmlcov/
 /web/apps/web/next-env.d.ts.bak
 /web/apps/web/tsconfig.tsbuildinfo
 
+# Phase 10.x static export — generated bundle data and final deliverable folder.
+/web/apps/web/public/data/
+
 # Phase 8.2 persistent index — local SQLite (and any other on-disk index state).
 /web/.data/

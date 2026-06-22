@@ -2,7 +2,6 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiBanner } from "@/components/ApiBanner";
 
-export const dynamic = "force-dynamic";
 
 export default async function ConventionsPage() {
   let list;

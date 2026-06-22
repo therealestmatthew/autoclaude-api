@@ -3,13 +3,15 @@ name: company-edition
 title: "Company Edition — fork-and-pivot to a Finance Transformation practice platform"
 status: draft
 created_at: 2026-06-19
-updated_at: 2026-06-19
+updated_at: 2026-06-19 (internal-tool correction)
 completed_at:
 supersedes: []
 superseded_by:
 locked_decisions:
   - "Hard fork into a private company repo; no upstream sync from autoclaude after Phase 10.0."
-  - "Single shared instance; `client` is a scoping entity for brand, context, engagements, and notes — not a per-client deployment."
+  - "This is an INTERNAL DELIVERY TOOL for the consulting practice — not a multi-client tenancy platform. Consultants use it to generate branded deliverables; clients never log in."
+  - "Single shared instance; `client` is a lightweight lookup record (slug, name, brand_slug, engagement_context) for repeat-export convenience only — not a tenant boundary."
+  - "No sensitivity tiers, cost budgets, approval workflows, or per-client access controls. Those belong in Phase 11 RBAC if ever needed."
   - "AWS deploy target is 6–12 months out; build cloud-portability seams now, defer cloud implementation to Phase 11."
   - "Keep all of Scout discovery; retarget sources to finance-relevant feeds later if useful."
   - "`Client` is a first-class DB entity, not a catalog kind (catalog assets carry mandatory provenance that clients do not have)."
@@ -17,8 +19,9 @@ locked_decisions:
   - "`kind:` enum is split into `catalog_kind` (closed, governs `/catalog/` + `/brands/`) and `document_kind` (open, governs everything else) in Phase 10.0 to resolve the existing drift (`convention`, `engagement`, `readme`, `deck`, `generated`, `session-prompt` already in use)."
   - "`/consulting/templates/` is renamed to `/consulting/methodologies/templates/` in Phase 10.0 to free the `template` catalog kind from collision with prose proposal/SOW/retro templates."
   - "Brand binaries (`logo-*.svg`, `*.potx`, `fonts/*.ttf`) are exempt from the `.meta.yaml` sidecar convention; the brand's `brand.md` manifests its siblings. Exception is documented in `/conventions/frontmatter.md`."
+  - "Brand is a small curated catalog: firm brand + co-branded variants + unbranded/clean. Selected at export time or defaulted on the client record."
   - "Bundle composition uses **per-template generators** (each template declares `generator_kind`/`generator_slug`); bundles do not override generators except via explicit `generator_overrides` at export-request time."
-  - "Slug-based soft-FKs are paired with **bucket-isolated indexer registration** so `brand_slug`/`bundle_slug`/`template_slug` resolve unambiguously, and the writes API blocks rename of any asset whose slug is referenced by a DB row (unless a `cascade=true` query param is passed)."
+  - "Slug-based soft-FKs are paired with **bucket-isolated indexer registration** so `brand_slug`/`bundle_slug`/`template_slug` resolve unambiguously."
 ---
 
 # Company Edition — fork-and-pivot to a Finance Transformation practice platform
@@ -50,8 +53,8 @@ These shape the plan — each is justified inline below.
 6. **Finance ontology as a first-class artifact.** Build `/domain/finance-transformation/` with a glossary and process map (R2R, O2C, P2P, FP&A, close). Agents read this as context so they speak finance, not generic consulting.
 7. **`Storage` abstraction now, S3 implementation later.** A named interface at `web/apps/api/exports/storage.py` with one concrete `LocalStorage` today, ready to swap for `S3Storage` in Phase 11. Cheapest possible AWS seam.
 8. **Provenance manifest on every export.** Every generated deliverable carries an embedded manifest naming the exact bundle / template / brand / generator versions and git SHA that produced it. Audit-grade reproducibility for finance work.
-9. **Cost budgets and approval workflow are core, not optional.** Finance partners will not trust a tool that can spend $100 per click or ship a client deliverable unreviewed. `cost_budget_usd` lives on `Client` and `ExportJob`; an approval gate sits between export completion and download for any sensitivity tier above `standard`. Both ship in 10.x, not 11.x.
-10. **Sensitivity tier has teeth, not just metadata.** `Client.sensitivity_tier` (`standard | restricted | nda-only`) gates real behaviors: restricted clients can't `commit_to_engagement=true`, notes are redacted from cross-client search, exports require partner approval. Wired in 10.3, not left as documentation.
+9. **Cost tracking is informational, not a gate.** `ExportJob.cost_usd` is accumulated and displayed in export history so operators can see generator spend over time. No hard budget caps or approval gates — this is an internal tool and that overhead isn't warranted.
+10. ~~Sensitivity tier~~ — dropped. This is an internal delivery tool; no per-client access controls, sensitivity tiers, or approval workflows are needed.
 
 ## Architecture
 
@@ -178,16 +181,10 @@ class Client(Base):
     slug = Column(String(128), primary_key=True)
     name = Column(String(256), nullable=False)
     industry = Column(String(128), nullable=True)
-    sensitivity_tier = Column(String(16), default="standard")  # standard|restricted|nda-only
-    brand_slug = Column(String(128), nullable=True)            # soft FK → asset.slug WHERE bucket='brand'
-    cost_budget_usd = Column(Float, nullable=True)             # client-level cap (rolling window)
-    cost_period_days = Column(Integer, nullable=False, default=30)
-    msa_signed_at = Column(String(10), nullable=True)          # displayed on client page; informational
-    primary_contact = Column(JSON, nullable=True)
-    data_residency = Column(String(32), nullable=True)         # informational in 10.x; enforced in 11.x cloud deploy
+    brand_slug = Column(String(128), nullable=True)            # soft FK → asset.slug WHERE bucket='brand'; default brand at export
+    engagement_context = Column(Text, nullable=True)           # free-text context injected into generator prompts
     created_at = Column(Float, nullable=False)
     updated_at = Column(Float, nullable=False)
-    notes = Column(Text, nullable=True)
 
 class Note(Base):
     __tablename__ = "note"
@@ -195,19 +192,15 @@ class Note(Base):
     note_id = Column(String(36), nullable=False)      # stable across revisions
     revision = Column(Integer, nullable=False, default=1)
     is_current = Column(Boolean, nullable=False, default=True)
-    client_slug = Column(String(128), nullable=False)
-    asset_slug = Column(String(128), nullable=True)   # null = client-level; else asset-level
-    category = Column(String(64), nullable=False)     # discovery|meeting|finding|risk|comment|tip|warning|usage
-    author = Column(String(128), nullable=False)
+    client_slug = Column(String(128), nullable=True)  # null = asset-only note
+    asset_slug = Column(String(128), nullable=True)   # null = client-level note; one of these two must be set
+    category = Column(String(64), nullable=False)     # finding|risk|comment|tip|warning|usage
     body = Column(Text, nullable=False)
     tags = Column(JSON, default=list)
     created_at = Column(Float, nullable=False)
-    updated_at = Column(Float, nullable=False)
     __table_args__ = (
         Index("ix_note_client_slug", "client_slug"),
         Index("ix_note_asset_slug", "asset_slug"),
-        Index("ix_note_category", "category"),
-        # Partial unique index: SQLite + Postgres both support this syntax
         Index("uq_note_current", "note_id", unique=True, sqlite_where=text("is_current = 1"),
               postgresql_where=text("is_current = true")),
     )
@@ -225,17 +218,13 @@ class ExportJob(Base):
     created_at = Column(Float, nullable=False)
     completed_at = Column(Float, nullable=True)
     bundle_slug = Column(String(128), nullable=False)
-    client_slug = Column(String(128), nullable=False)
-    engagement_slug = Column(String(128), nullable=True)   # for per-engagement budget attribution + filtering
+    client_slug = Column(String(128), nullable=True)       # optional — set when exporting for a specific client
+    engagement_slug = Column(String(128), nullable=True)   # optional — for per-engagement filtering
     brand_slug = Column(String(128), nullable=False)
     requested_formats = Column(JSON, nullable=False)
     status = Column(String(16), nullable=False)            # pending|running|complete|failed
     steps = Column(JSON, nullable=False, default=list)     # [{name, status, started_at, completed_at, error}]
-    approval_status = Column(String(16), nullable=False, default="not-required")
-                                                            # not-required | pending | approved | rejected
-    approval_by = Column(String(128), nullable=True)
-    approval_at = Column(Float, nullable=True)
-    cost_usd = Column(Float, nullable=False, default=0.0)  # accumulated generator spend
+    cost_usd = Column(Float, nullable=False, default=0.0)  # accumulated generator spend (informational)
     audit_id = Column(String(36), nullable=True)
     artifacts = Column(JSON, nullable=True)
     manifest = Column(JSON, nullable=True)
@@ -294,15 +283,13 @@ No changes to the `asset` table — new `kind:` values are admitted because the 
 Pattern: thin filters over `Asset` for brands / templates / bundles (mirror `engagements.py`); real CRUD for clients / notes / exports.
 
 ```
-GET    /clients                            list (filter sensitivity_tier, q)
-POST   /clients                            create (DB + optional /clients/<slug>/README.md scaffold)
+GET    /clients                            list (filter q)
+POST   /clients                            create (DB row + optional /clients/<slug>/README.md scaffold)
 GET    /clients/{slug}                     detail + linked brand summary + recent notes
-PUT    /clients/{slug}                     update (If-Match version, like writes.py:60)
+PUT    /clients/{slug}                     update
 GET    /clients/{slug}/notes
 POST   /clients/{slug}/notes
-GET    /clients/{slug}/cost-usage          rolling spend vs. Client.cost_budget_usd
 
-GET    /engagements/{slug}/cost-usage      lifetime spend vs. Engagement.cost_budget_usd
 GET    /notes/{id} / PUT                   append-only (PUT creates new revision row)
 GET    /notes/by-stable-id/{note_id}/history   revision history
 
@@ -318,9 +305,7 @@ GET    /bundles/{slug}                     detail with templates resolved
 
 POST   /export/bundle/{slug}               kick off export
 GET    /export/jobs/{id}                   poll status + steps[] + manifest
-GET    /export/jobs/{id}/artifact/{fmt}    stream download (gated on approval if required)
-POST   /export/jobs/{id}/approve           partner approval; required for sensitivity != standard
-POST   /export/jobs/{id}/reject            partner rejection (with reason)
+GET    /export/jobs/{id}/artifact/{fmt}    stream download
 POST   /export/jobs/{id}/retry             resume from last failed step
 
 GET    /processes                          controlled vocabulary
@@ -341,10 +326,10 @@ Note: `POST /catalog` is **not** added — the catalog router stays read-only. I
 
 New module `web/apps/api/exports/pipeline.py` plus the `Storage` interface at `web/apps/api/exports/storage.py` (one concrete `LocalStorage` now; future `S3Storage` swap).
 
-Call sequence for `POST /export/bundle/{slug}` with `{ client, formats, context, commit_to_engagement, generator_overrides? }`. Each numbered step writes a `{name, status, ...}` entry into `ExportJob.steps` as it begins and updates it on completion/failure.
+Call sequence for `POST /export/bundle/{slug}` with `{ client_slug?, brand_slug, formats, context?, commit_to_engagement?, engagement_slug?, generator_overrides? }`. Each numbered step writes a `{name, status, ...}` entry into `ExportJob.steps` as it begins and updates it on completion/failure.
 
-1. **resolve** — `_find_record` (writes.py:39) for bundle / brand / templates; DB lookups for Client + Notes + (optional) Engagement. 404 on any missing. **Cost-budget check:** sum `ExportJob.cost_usd` for the relevant rolling window and reject (`429 budget-exceeded`) if the new run's estimated cost would breach either (a) `Client.cost_budget_usd` over `cost_period_days`, or (b) `Engagement.cost_budget_usd` over the engagement's lifetime (when `engagement_slug` is supplied in the request). Engagement caps live in `/consulting/engagements/<slug>/README.md` frontmatter as `cost_budget_usd: <n>`; the resolver reads via the existing engagement asset.
-2. **stage** — open audit + job. `begin_audit(action="export-bundle", ...)` (audit.py:51); insert `ExportJob` row, `status=pending`, `approval_status=` "not-required" if `sensitivity_tier=standard` else "pending". `Storage.workspace(job_id)` returns a fresh tmpdir. Copy brand binary assets via `writes/fs.safe_path`.
+1. **resolve** — `_find_record` (writes.py:39) for bundle / brand / templates; optional DB lookup for Client (if `client_slug` provided) to pull `engagement_context` and default `brand_slug`. 404 on any missing asset.
+2. **stage** — open audit + job. `begin_audit(action="export-bundle", ...)` (audit.py:51); insert `ExportJob` row, `status=pending`. `Storage.workspace(job_id)` returns a fresh tmpdir. Copy brand binary assets via `writes/fs.safe_path`.
 3. **render** — per template, invoke its declared generator (`template.generator_kind`/`generator_slug`, overridden by `generator_overrides`). Generator returns `{placeholder_name: fragment}` plus a `cost_usd` it spent. Accumulate into `ExportJob.cost_usd`. **Validation:** reject as `422 placeholder-conflict` if two templates' generators produce the same placeholder key with non-equal values (defense in depth — bundle save also rejects this).
 4. **compose** — per template (this is where chart-generation lives; see below):
    - `pptx` → `python-pptx`, open master, replace `{{placeholders}}`, apply brand colors via theme overrides, emit native chart objects for `chart_spec` placeholders
@@ -353,9 +338,8 @@ Call sequence for `POST /export/bundle/{slug}` with `{ client, formats, context,
 5. **convert** — if requested format ≠ template native, shell `libreoffice --headless --convert-to pdf` (binary path via `settings.libreoffice_bin`). Non-zero exit or zero-byte output surfaces as `502 conversion-failed` on this step only — the native-format artifact from step 4 is still persisted.
 6. **persist** — `Storage.put(job_id, format, bytes)`; compute sha256 + size; attach to `ExportJob.artifacts`.
 7. **manifest** — capture `raw_hash` from each `AssetRecord` (indexer.py:91) + `git rev-parse HEAD` (via `writes/git.py`) + accumulated `cost_usd`. Store on `ExportJob.manifest` and embed a copy in PPTX/DOCX file properties.
-8. **commit** (optional, sensitivity-gated) — if `commit_to_engagement=true` AND `Client.sensitivity_tier != restricted`, copy artifacts into `/consulting/engagements/<slug>/deliverables/` with `.meta.yaml` sidecars and commit via `writes/git.py`. Restricted-tier clients always return `409 commit-blocked-by-sensitivity` for this step; their artifacts stay in `Storage` only and download requires re-auth.
+8. **commit** (optional) — if `commit_to_engagement=true`, copy artifacts into `/consulting/engagements/<slug>/deliverables/` with `.meta.yaml` sidecars and commit via `writes/git.py`. Default is `false` — consultants opt in per export.
 9. **finalize** — `audit.commit(result=...)`; set `ExportJob.status="complete"`; trigger `index.sync()` if anything landed in the repo.
-10. **approval gate (download-side)** — `GET /export/jobs/{id}/artifact/{fmt}` checks `approval_status`. If `pending`, returns `423 awaiting-approval` and surfaces the partner-review URL. Partners hit `POST /export/jobs/{id}/approve` after spot-checking artifacts via a preview render.
 
 **Charts in deliverables.** Templates may declare a `chart_spec` placeholder type (e.g. `executive_summary_chart: { kind: chart_spec, type: bar_clustered, data_source: <generator-output-key> }`). The compose step (4) instantiates native `python-pptx`/`python-docx`/`openpyxl` chart objects so downstream consumers can edit the chart in PowerPoint, not just see a flattened image. Chart styling pulls from the brand's color palette.
 
@@ -364,10 +348,7 @@ Call sequence for `POST /export/bundle/{slug}` with `{ client, formats, context,
 - `422 placeholder-missing` (step render) — generator didn't fill a declared placeholder
 - `422 placeholder-conflict` (step render) — two generators wrote the same placeholder with different values
 - `409 brand-asset-missing` (step stage) — brand `.md` out of sync with binary siblings
-- `429 budget-exceeded` (step resolve) — would breach client cost budget
 - `502 conversion-failed` (step convert) — LibreOffice non-zero or zero-byte output; native-format artifact retained (partial success)
-- `409 commit-blocked-by-sensitivity` (step commit) — restricted client cannot commit to repo
-- `423 awaiting-approval` (download) — export complete but partner approval not yet granted
 
 All follow the existing `with begin_audit` failure pattern in `writes.py:148-176` and write the failure into `ExportJob.steps[i].error` so the UI can render a per-step progress meter.
 
@@ -428,13 +409,13 @@ Build the seams. Skip the cloud code until Phase 11.
 Each phase is sized to a focused session and lands a usable increment.
 
 - **10.0 — Fork, rename & schema hygiene (1 day).** Hard-fork into private company repo. Rename Python package + CLI scripts (`autoclaude` → `<hub>`). Drop open-source-only seed content unrelated to finance — keep schema + examples. Update CLAUDE.md header. **Schema hygiene (new):** split `kind:` enum into `catalog_kind` (closed) and `document_kind` (open); rename `/consulting/templates/` → `/consulting/methodologies/templates/`; document brand binary `.meta.yaml` exception in `/conventions/frontmatter.md`. Smoke-test API + web boot. Copy this plan into `/docs/plans/company-edition.md` in the new repo.
-- **10.1 — Client entity + brand kind (2 days).** Migration 0003 (client + business_process + user_preference tables only). `Client` router. New `catalog_kind: brand` admitted; `brand` bucket added to `indexer.classify_bucket` for slug isolation. `/brands/<slug>/brand.md` examples. Brand router (read-only). Slug-rename guardrail: writes API rejects rename of any asset whose slug is referenced from a DB row unless `?cascade=true`. Backfill: convert one existing engagement to point at a `Client` row.
-- **10.2a — Export pipeline spike (1 day, non-shippable).** **De-risk before building.** Hardcoded end-to-end: one template (PPTX), one brand (one client's colors + logo), one generator output. Validate that (a) `python-pptx` can swap brand colors on a real `.potx` master (known to require XML-level manipulation), and (b) LibreOffice converts the result legibly with the brand's embedded TTF. Output: a single shell script under `/web/apps/api/exports/spikes/` + a one-page findings doc in `/docs/plans/`. **Exit criterion:** both work or the plan moves to Gotenberg (cloud) earlier.
+- **10.1 — Client record + brand kind (1.5 days).** Migration 0003 (client + business_process + user_preference tables only). `Client` router (lightweight: slug, name, industry, brand_slug, engagement_context). New `catalog_kind: brand` admitted; `brand` bucket added to `indexer.classify_bucket` for slug isolation. `/brands/<slug>/brand.md` examples (firm brand + unbranded variant). Brand router (read-only). Backfill: wire one engagement to point at a `Client` row.
+- **10.2a — Export pipeline spike (1 day, non-shippable).** **De-risk before building.** Hardcoded end-to-end: one template (PPTX), one brand (firm colors + logo), one generator output. Validate that (a) `python-pptx` can swap brand colors on a real `.potx` master (known to require XML-level manipulation), and (b) LibreOffice headless converts the result legibly with embedded TTF fonts. Spike must use `-env:UserInstallation=file:///tmp/lo-<uuid>` in the subprocess call (concurrency safety — document this in the findings). Output: spike script at `/web/apps/api/exports/spikes/` + findings doc at `/docs/plans/10-2a-export-spike-findings.md`. **Exit criterion:** branded PPTX → branded PDF round-trip works, or findings doc identifies the blocking gap and names the fallback.
 - **10.2b — Templates + bundles + native-format export (3 days).** New catalog kinds `template`, `bundle` (in their own buckets). Routers. `Storage` interface + `LocalStorage`. Pipeline steps 1–4 + 6 + 7 + 9 (`resolve`, `stage`, `render`, `compose`, `persist`, `manifest`, `finalize`). Native format only — no PDF, no charts yet. Provenance manifest. UI: deliverable wizard ("pick bundle → pick client → export").
-- **10.2c — PDF, charts, commit & cost budgets (2 days).** Pipeline steps 5 (`convert` via LibreOffice) and 8 (`commit` to engagement). `chart_spec` placeholder type with native `python-pptx`/`openpyxl` chart objects. Cost-budget enforcement at step 1 — both **client-level** (`Client.cost_budget_usd` over a rolling window) and **engagement-level** (`Engagement.cost_budget_usd` over the engagement's lifetime, via `ExportJob.engagement_slug`). `ExportJob.cost_usd` accumulation; `/clients/{slug}/cost-usage` and `/engagements/{slug}/cost-usage` endpoints. Per-step status meter in the wizard UI.
-- **10.3 — Notes + sensitivity-tier behaviors (1.5 days).** `Note` table (already in migration 0003) with `note_id`/`revision`/`is_current` partial unique index. Notes API. UI: notes panel on Client and Asset pages. **Sensitivity wiring (new):** `sensitivity_tier=restricted` redacts notes from cross-client search; `nda-only` requires per-asset access list (Phase-11 RBAC; for now, simple per-user allowlist).
+- **10.2c — PDF, charts & commit (1.5 days).** Pipeline steps 5 (`convert` via LibreOffice) and 8 (`commit` to engagement, opt-in). `chart_spec` placeholder type with native `python-pptx`/`openpyxl` chart objects. `ExportJob.cost_usd` accumulation (informational, displayed in export history). Per-step status meter in the wizard UI.
+- **10.3 — Notes (1 day).** `Note` table (already in migration 0003) with `note_id`/`revision`/`is_current` partial unique index. Notes API. UI: notes panel on Client and Asset pages. No access controls — notes are internal-only and visible to all operators.
 - **10.4 — Business-process taxonomy + finance ontology + brand voice (2.5 days).** Seed `business_process` rows in 0003. Extend asset frontmatter validation to recognize `business_processes:` and enforce the new `catalog_kind`/`document_kind` split. Backfill existing catalog with tags. Build `/domain/finance-transformation/` content. Update reviewer-agent prompt (Phase 9.0) to classify new tag axes. **Brand voice in generator prompts (new):** the generator dispatcher (`exports/generators.py`) now injects the resolved brand's `voice` block (`tone`, `taboo`, `preferred`) as a system-prompt header for every generator invocation; a generator that emits a `taboo` word is logged and surfaces a warning on the export job (non-blocking; partners decide whether to reject).
-- **10.5 — Marketplace UX + approval workflow (3.5 days).** New landing page. Process pages. "Use this" affordances on asset detail. Composer view (basic list-and-select). **Approval workflow (new):** approval gate UI for partners — preview artifacts side-by-side with the bundle definition, approve/reject with note. `POST /export/jobs/{id}/approve|reject`. Download endpoint enforces `approval_status`.
+- **10.5 — Marketplace UX (2.5 days).** New landing page ("What are you working on today?"). Process pages. "Use this" affordances on asset detail. Composer view (basic list-and-select). Export history panel with download links.
 - **10.6 — Configurable sidebar (0.5 day).** `UserPreference` row (already in 0003). `/config/sidebar` endpoints. Settings page with drag-to-reorder.
 - **10.7a — Markdown ingestion UI (1.5 days).** `POST /ingest` multipart endpoint. UI drop zone. Route uploads through Scout queue → reviewer agent → proposals UI. Reuse `writes/{editor,git,audit}.py`.
 - **10.7b — Tabular ingestion (2 days).** New `catalog_kind: dataset` for CSV/XLSX inputs (client GLs, trial balances, KPI workbooks). `POST /ingest/dataset` introspects schema (column names, types, row count, head rows), stores binary under `/datasets/<slug>/`, generates `dataset.md` frontmatter. Templates can declare a `dataset` placeholder type that pulls structured data into chart_spec inputs. PII redaction hook: optional regex-based mask at ingest time for restricted-tier clients.
@@ -487,27 +468,27 @@ Each phase is sized to a focused session and lands a usable increment.
 | Sync indexer ↔ DB | `web/apps/api/db/sync.py` |
 | Existing engagement router as pattern | `web/apps/api/routers/engagements.py` |
 
-## Operator questions (must be answered before 10.0 ships)
+## Operator questions (answered 2026-06-19)
 
-These are decisions only the operator can make — they shape what gets dropped, who owns what, and where data can live.
+1. **License posture on forked content.** ✅ Keep all content under the original open-source license. No relicensing; no assets dropped.
+2. **New repo identity.** ✅ Deferred — will be set up on company domain later. Current private repo is the working instance.
+3. **Auth-deferral risk tolerance.** ✅ Acceptable. API runs unauthenticated (`user_id="default"`) on operator's local machine through Phase 10. No basic-auth wrapper needed.
+4. **Client ↔ Brand cardinality.** ✅ 1:1 — one structured package per client. `Client.brand_slug` model is correct.
+5. **PII / data-residency commitments.** ✅ No special commitments. Client brand is used only for created documentation; no cross-border data constraints.
 
-1. **License posture on forked content.** autoclaude is open source. After the hard fork, can `/catalog/`, `/claude/`, and `/consulting/methodologies/` content be (a) kept under original license inside the private repo, (b) relicensed company-proprietary, or (c) some assets must be left behind? This determines what "drop open-source-only seed content" actually means in 10.0.
-2. **New repo identity.** GitHub org / account that owns the fork? Repo name and visibility (private to user, private to firm, internal to a dev org)? CI provider (GitHub Actions / something else)?
-3. **Auth-deferral risk tolerance.** Plan defers auth to Phase 11. Until then the API runs unauthenticated with `user_id="default"`. Is that acceptable on the operator's laptop, or does the local instance need HTTP basic auth if ever bound to `0.0.0.0`? (If consultants ever run the API on a shared network — coffee shop, client office — the answer is "yes, basic auth at minimum.")
-4. **Client ↔ Brand cardinality.** `Client.brand_slug` assumes 1:1. Real cases: (a) a consulting subsidiary working under their parent's brand → 1 brand, many clients; (b) one client requesting a white-label "unbranded" output alongside their normal brand → 1 client, many brands. Which patterns do we need to support at launch?
-5. **PII / data-residency commitments.** Are there signed MSAs requiring certain client data not leave specific jurisdictions or systems? Determines whether (a) Phase 11 AWS deploy can be US-region single-tenant, (b) per-client S3 buckets are mandatory, or (c) some clients must stay on the local instance permanently.
+## Open decisions (all resolved 2026-06-19)
 
-## Open decisions (smaller calls; recommendations included)
-
-1. **Working name.** Candidates: **Forge** (active, marketplace-y), **Practice Hub** (descriptive), **Atlas** (knowledge-y), **Studio** (creative). Recommendation: **Forge**.
-2. **PDF conversion engine for local.** LibreOffice CLI is recommended (cheapest); Gotenberg in cloud. The 10.2a spike will confirm LibreOffice handles brand fonts legibly — if not, Gotenberg moves up to 10.2c.
-3. **Reviewer-agent budget defaults.** Current cap is $5/day. For an internal tool with active ingestion, $25/day is more realistic. Confirm.
-4. **`commit_to_engagement` default.** Should generated artifacts auto-commit to the engagement folder by default, or require an explicit flag per export? Recommendation: **opt-in** (`commit_to_engagement=false` default) — git history shouldn't fill with draft deliverables.
+1. **Working name.** ✅ **Forge.**
+2. **PDF conversion engine.** ✅ **LibreOffice headless** for Phase 10.x; **Gotenberg** (ECS sidecar) for Phase 11 cloud. Key implementation constraint: every `subprocess.run` call must pass `-env:UserInstallation=file:///tmp/lo-<uuid>` to isolate the per-conversion LibreOffice profile directory — concurrent exports will collide without it. Embed fonts in the PPTX master and install any brand TTF/OTF at image build time (`/usr/local/share/fonts/`). The 10.2a spike validates fidelity on a real branded `.potx`; if chart rendering is unacceptable, Aspose is the commercial fallback (not Gotenberg — same fidelity as LibreOffice under the hood). Supported deliverable types catalogued in `/conventions/deliverable-types.md`.
+3. **Reviewer-agent budget defaults.** ✅ Keep at $5/day (no change).
+4. **`commit_to_engagement` default.** ✅ Opt-in (`false` by default) — already locked above.
 
 ## Out of scope (explicit)
 
 - Multi-instance / true SaaS multi-tenancy
-- External client-facing portal (clients do not log in)
+- External client-facing portal (clients do not log in — this is an internal tool)
+- Sensitivity tiers, approval workflows, per-client cost budgets (internal tool; no tenancy semantics)
+- PII redaction on ingest
 - Time tracking / billing / CRM integration
 - Real-time collaboration (we generate and export, not co-author)
 - Fine-tuning models on internal assets
@@ -519,16 +500,16 @@ These are decisions only the operator can make — they shape what gets dropped,
 End-to-end smoke after each phase:
 
 - **After 10.0:** `uv run pytest && uv run autoclaude-api` boots under new package name; `( cd web/apps/web && npm run dev )` renders the dashboard. Schema validation accepts both new `catalog_kind` and existing `document_kind` values; `/consulting/methodologies/templates/proposal.md` indexes cleanly.
-- **After 10.1:** `POST /clients` creates Acme; `GET /clients/acme-co` returns it with `brand_summary`. `/brands/acme-co/brand.md` indexed in bucket `brand` and visible at `GET /brands/acme-co`. Renaming the brand asset without `?cascade=true` returns `409 referenced-by`; with the flag, `Client.brand_slug` updates in the same audit envelope.
+- **After 10.1:** `POST /clients` creates Acme; `GET /clients/acme-co` returns it with `brand_summary`. `/brands/firm/brand.md` indexed in bucket `brand` and visible at `GET /brands/firm`. An export request that omits `brand_slug` falls back to `Client.brand_slug`.
 - **After 10.2a (spike):** `/web/apps/api/exports/spikes/10_2a_pptx_brand_swap.py` runs end-to-end on a real `.potx` → branded `.pptx` → branded `.pdf`. Findings doc names any technique gaps that change 10.2b/c scope.
 - **After 10.2b:** `POST /export/bundle/finance-quick-assessment-bundle?client=acme-co` returns a job; polling `GET /export/jobs/{id}` shows `steps[]` advancing through `resolve|stage|render|compose|persist|manifest|finalize`; `status=complete` with a downloadable `.pptx` whose colors match Acme brand and whose embedded properties include the manifest JSON (bundle/template/brand/generator versions + git SHA).
-- **After 10.2c:** Same export with `formats: [pptx, pdf]` returns both artifacts; a `chart_spec` placeholder renders as a native, editable PowerPoint chart (not an image). `Client.cost_budget_usd=1.00` causes a second large export to fail at `step=resolve` with `429 budget-exceeded`.
-- **After 10.3:** Notes appear on a Client page and on an Asset page; `PUT /notes/{id}` creates a revision row, the old row stays with `is_current=false`. Marking Acme as `sensitivity_tier=restricted` removes its notes from `/search?q=...` results when issued by a user not on the access list.
+- **After 10.2c:** Same export with `formats: [pptx, pdf]` returns both artifacts; a `chart_spec` placeholder renders as a native, editable PowerPoint chart (not an image). `ExportJob.cost_usd` is populated and visible in export history.
+- **After 10.3:** Notes appear on a Client page and on an Asset page; `PUT /notes/{id}` creates a revision row, the old row stays with `is_current=false`.
 - **After 10.4:** Browsing `/process/record-to-report` lists every asset tagged for R2R; reviewer agent on a fresh candidate assigns a `business_processes:` tag. A frontmatter with `kind: brand` in `/scout/queue/` is rejected by validation (queue uses document_kind only).
-- **After 10.5:** Landing page loads as the task launcher, not the database browser. Generating an export for a restricted-tier client puts `approval_status=pending`; downloading the artifact returns `423 awaiting-approval`; `POST /export/jobs/{id}/approve` flips it and the same download succeeds.
+- **After 10.5:** Landing page loads as the task launcher, not the database browser. Generating an export completes immediately and is available for download from the export history panel.
 - **After 10.6:** Hiding a sidebar section in `/settings/sidebar` persists across page reloads.
 - **After 10.7a:** Drag-dropping a `.md` skill file onto the catalog page creates a queue candidate at `/scout/queue/` and an immediate reviewer-agent proposal at `/proposals`.
-- **After 10.7b:** Drag-dropping `gl-q2-2026.xlsx` creates a `dataset` asset with schema introspection in frontmatter (columns, types, row count). A bundle template can reference `dataset: gl-q2-2026` in a `chart_spec` placeholder and the resulting PPTX contains a chart sourced from real values.
+- **After 10.7b:** Drag-dropping `gl-q2-2026.xlsx` creates a `dataset` asset with schema introspection in frontmatter (columns, types, row count). A bundle template can reference `dataset: gl-q2-2026` in a `chart_spec` placeholder and the resulting PPTX contains a chart sourced from real values. PII redaction hook is not implemented (internal tool; not needed).
 - **After 10.8:** `docker build .` succeeds; `docker run -e DATABASE_URL=sqlite:///...` boots the API against a swapped storage root; no hardcoded paths remain. Logs are structured JSON.
 
 A full PR-by-PR test plan accompanies each phase commit; the convention `/conventions/testing.md` already specifies layout (unit vs integration, fixtures, markers).

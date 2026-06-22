@@ -12,6 +12,8 @@ export type Bucket =
   | "readme"
   | "claude"
   | "consulting"
+  | "brand"
+  | "timeline"
   | "other";
 
 export interface AssetSummary {
@@ -23,6 +25,7 @@ export interface AssetSummary {
   status: string | null;
   quality: number | null;
   tags: string[];
+  delivery_functions: string[];
   created_at: string | null;
   updated_at: string | null;
   issues: string[];
@@ -185,4 +188,87 @@ export interface AssetRaw {
   frontmatter: Record<string, unknown>;
   body: string;
   version: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10.1 — Client + Brand + BusinessProcess wire shapes
+// ---------------------------------------------------------------------------
+
+export interface ClientItem {
+  slug: string;
+  name: string;
+  industry: string | null;
+  brand_slug: string | null;
+  engagement_context: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface ClientListResponse {
+  items: ClientItem[];
+  total: number;
+}
+
+export interface ClientCreate {
+  slug: string;
+  name: string;
+  industry?: string | null;
+  brand_slug?: string | null;
+  engagement_context?: string | null;
+}
+
+export interface ClientUpdate {
+  name?: string | null;
+  industry?: string | null;
+  brand_slug?: string | null;
+  engagement_context?: string | null;
+}
+
+export interface BusinessProcessItem {
+  slug: string;
+  name: string;
+  parent_slug: string | null;
+  description: string | null;
+}
+
+export interface BusinessProcessListResponse {
+  items: BusinessProcessItem[];
+  total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Timelines — markdown-backed customizable calendars
+// ---------------------------------------------------------------------------
+
+export interface TimelineEntry {
+  title: string;
+  type: string;
+  date?: string | null;
+  start?: string | null;
+  end?: string | null;
+  color?: string | null;
+  ref?: string | null;
+  notes?: string | null;
+}
+
+export interface TimelineSummary {
+  path: string;
+  slug: string;
+  title: string | null;
+  status: string | null;
+  view: string;
+  entry_count: number;
+  first_date: string | null;
+  last_date: string | null;
+  tags: string[];
+}
+
+export interface TimelineDetail extends TimelineSummary {
+  body: string;
+  entries: TimelineEntry[];
+}
+
+export interface TimelineListResponse {
+  items: TimelineSummary[];
+  total: number;
 }

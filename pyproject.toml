@@ -19,6 +19,8 @@ scout = "scout.agent.cli:main"
 manifest = "tools.manifest:main"
 ft-autoclaude-api = "tools.web:main"
 ft-autoclaude-index = "tools.index:main"
+ft-autoclaude-export-static = "tools.export_static:main"
+ft-autoclaude-doctor = "tools.doctor:main"
 
 # PEP 735 dependency groups. `uv sync` installs the runtime deps + the `dev`
 # group by default; `uv sync --no-dev` skips the group for a slim runtime

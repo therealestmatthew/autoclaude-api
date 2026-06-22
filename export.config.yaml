@@ -1,0 +1,55 @@
+# Configuration for `ft-autoclaude-export-static` — controls which catalog
+# assets land in the shareable bundle at `dist/catalog-static/`.
+#
+# How matching works
+# ------------------
+# An asset is included in the bundle when ALL of these are true:
+#   1. It passes every active rule in `include:` (an empty list means
+#      that dimension is unrestricted)
+#   2. Its slug is NOT in `exclude_slugs`
+#
+# An asset is included unconditionally if its slug appears in `include_slugs`
+# (the `include:` rules are bypassed; `exclude_slugs` still wins).
+#
+# To ship a different profile (e.g., a client-facing slice), copy this file
+# and pass `--config path/to/your-profile.yaml` to the export CLI.
+
+include:
+  # Asset status. Defaults to vetted items only; drop drafts and archived.
+  status:
+    - adopted
+    - reviewed
+
+  # Asset kinds. Empty = all kinds. Useful when you want to ship only the
+  # action-oriented tools (skill/plugin/mcp/agent/prompt) and omit
+  # articles/orgs/people.
+  kind: []
+    # - agent
+    # - skill
+    # - plugin
+    # - mcp
+    # - prompt
+
+  # Delivery functions (see conventions/delivery-functions.md). Empty = all.
+  # Use this to slice by Anaplan engagement phase, e.g. only ship tools
+  # tagged for `requirements` or `build`.
+  delivery_function: []
+    # - requirements
+    # - build
+
+  # Free-form tag filter. Empty = all. Useful for an opt-in "shareable" tag
+  # you maintain on individual assets.
+  tags: []
+    # - shareable
+    # - client-safe
+
+# Slug-level overrides — applied AFTER the include rules.
+exclude_slugs: []
+  # - some-internal-draft
+
+include_slugs: []
+  # - skills-for-humanity-s4h    # always ship this one, regardless of rules
+
+# Whole-section toggles.
+include_conventions: true       # ship /conventions/ markdown files
+include_plans: false            # ship /docs/plans/ markdown files
