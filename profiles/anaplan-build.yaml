@@ -1,0 +1,26 @@
+# Anaplan Build-phase workstream — for a build/test lead leading that slice.
+#
+# Goal: surface the templates and skills that come into play once
+# architecture is locked and the team is actively building, integrating,
+# and validating the model.
+
+include:
+  status:
+    - adopted
+    - reviewed
+
+  kind: []
+
+  # Only tools tagged for build, integration, or testing phases.
+  delivery_function:
+    - build
+    - integration
+    - testing
+
+  tags: []
+
+exclude_slugs: []
+include_slugs: []
+
+include_conventions: false
+include_plans: false

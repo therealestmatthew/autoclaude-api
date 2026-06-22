@@ -1,0 +1,31 @@
+# Client-facing share — what an external stakeholder sees.
+#
+# Goal: show our delivery toolkit (templates + adopted skills) without
+# exposing internal drafts, plans, or scout queue artifacts.
+
+include:
+  # Only vetted items — drop drafts/archived.
+  status:
+    - adopted
+    - reviewed
+
+  # Action-oriented kinds + deliverable templates. Excludes orgs, persons,
+  # repos, raw articles — useful for a clean client-facing browse.
+  kind:
+    - agent
+    - skill
+    - plugin
+    - mcp
+    - prompt
+    - template
+    - bundle
+
+  delivery_function: []
+  tags: []
+
+exclude_slugs: []
+include_slugs: []
+
+# Conventions and plans contain internal scaffolding the client doesn't need.
+include_conventions: false
+include_plans: false

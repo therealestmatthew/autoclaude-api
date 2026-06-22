@@ -1,0 +1,19 @@
+# Internal team share — full visibility, including in-progress items.
+#
+# Goal: distribute a complete snapshot of the system's state to teammates
+# who'll contribute back. Includes drafts so they can pick up stubs and
+# build them out.
+
+include:
+  # Everything — no status filter.
+  status: []
+  kind: []
+  delivery_function: []
+  tags: []
+
+exclude_slugs: []
+include_slugs: []
+
+# Ship everything; teammates need to see phase plans and conventions.
+include_conventions: true
+include_plans: true

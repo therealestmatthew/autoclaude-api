@@ -55,14 +55,17 @@ And in all cases:
 
 ### Maintaining multiple profiles
 
-Copy the config and pass it explicitly:
+Three ready-to-use profiles live in `/profiles/` — see [`profiles/README.md`](../../profiles/README.md) for the catalog.
 
 ```sh
-# An external-stakeholder build
+# External-stakeholder build (adopted + reviewed only, action-kinds + templates)
 uv run ft-autoclaude-export-static --config profiles/client-share.yaml --out dist/client-share
 
-# An internal-team build with everything
+# Internal-team build (everything, including drafts and plans)
 uv run ft-autoclaude-export-static --config profiles/internal.yaml --out dist/internal
+
+# Workstream-specific build (Anaplan Build phase)
+uv run ft-autoclaude-export-static --config profiles/anaplan-build.yaml --out dist/anaplan-build
 ```
 
 Common profile patterns:
